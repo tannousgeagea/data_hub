@@ -1,5 +1,6 @@
 import string
 from django.db import models
+from tenants.models import Tenant
 from django.core.exceptions import ValidationError
 
 def clean_field(value):
@@ -19,23 +20,6 @@ def clean_field(value):
         new_value += char
 
     return new_value
-
-# Create your models here.
-class Tenant(models.Model):
-    tenant_id = models.CharField(max_length=255, unique=True)
-    tenant_name = models.CharField(max_length=255)
-    location = models.CharField(max_length=100)
-    domain = models.CharField(max_length=50)
-    is_active = models.BooleanField(default=True, help_text="Indicates if the filter is currently active.")
-    created_at = models.DateTimeField(auto_now_add=True)
-    meta_info = models.JSONField(null=True, blank=True)
-    
-    class Meta:
-        db_table = "tenant"
-        verbose_name_plural = "Tenants"
-        
-    def __str__(self):
-        return f"{self.tenant_name}"
     
 class Language(models.Model):
     """
@@ -132,6 +116,7 @@ class TenantTableField(models.Model):
     class Meta:
         db_table = 'tenant_table_field'
         verbose_name_plural = "Tenant Table Fields"
+        unique_together = ('field', 'tenant_table')
         
     def __str__(self):
         return f"{self.tenant_table}: {self.field}"
@@ -173,6 +158,8 @@ class TableFilter(models.Model):
     filter_name = models.CharField(max_length=255, help_text="The internal name of the filter.")
     type = models.CharField(max_length=50, help_text="The data type of the filter (e.g., 'enum').")
     is_active = models.BooleanField(default=True, help_text="Indicates if the filter is currently active.")
+    is_external = models.BooleanField(default=False, help_text="Indicated whether the filter items are given from external url")
+    url = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -202,6 +189,7 @@ class FilterItem(models.Model):
     item_key = models.CharField(max_length=255, help_text="The internal key for the filter item (e.g., 'impurity').")
     is_active = models.BooleanField(default=True, help_text="Indicates if the filter item is currently active.")
     created_at = models.DateTimeField(auto_now_add=True)
+    field_order = models.ForeignKey(FieldOrder, on_delete=models.RESTRICT)
 
 
     class Meta:
@@ -234,6 +222,7 @@ class FilterLocalization(models.Model):
     language = models.ForeignKey(Language, on_delete=models.RESTRICT)
     title = models.CharField(max_length=255, help_text="Localized title of the filter.")
     description = models.TextField(blank=True, null=True, help_text="Localized description of the filter.")
+    placeholder = models.CharField(max_length=255, default='Select')
     created_at = models.DateTimeField(auto_now_add=True)
 
 

@@ -2,17 +2,10 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
 from .models import (
-    Tenant, Language, TableType, DataType, TableField, TenantTable,
+    Language, TableType, DataType, TableField, TenantTable, FieldOrder,
     TenantTableField, TableFieldLocalization, TableFilter, FilterItem,
     FilterLocalization, FilterItemLocalization, TenantTableFilter
 )
-
-@admin.register(Tenant)
-class TenantAdmin(ModelAdmin):
-    list_display = ('tenant_id', 'tenant_name', 'location', 'domain', 'is_active', 'created_at')
-    search_fields = ('tenant_name', 'location', 'domain')
-    list_filter = ('is_active',)
-
 
 @admin.register(Language)
 class LanguageAdmin(ModelAdmin):
@@ -45,6 +38,10 @@ class TenantTableAdmin(ModelAdmin):
     search_fields = ('tenant__tenant_name', 'table_type__name')
     list_filter = ('is_active',)
     ordering = ('-created_at',)
+
+@admin.register(FieldOrder)
+class FieldOrderAdmin(ModelAdmin):
+    list_display = ("field_position", "description")
 
 @admin.register(TenantTableField)
 class TenantTableFieldAdmin(ModelAdmin):

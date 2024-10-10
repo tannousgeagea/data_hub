@@ -79,4 +79,4 @@ RUN /bin/bash -c "chown $user:$user /home/entrypoint.sh"
 
 ENTRYPOINT /bin/bash -c ". /home/entrypoint.sh"
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-    CMD ["supervisorctl", "status", "||", "exit 1"]
+    CMD ["supervisorctl", "status"]

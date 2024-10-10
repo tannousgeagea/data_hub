@@ -36,6 +36,7 @@ ALLOWED_HOSTS = [os.getenv('ALLOWED_HOST', '0.0.0.0')]
 
 INSTALLED_APPS = [
     'unfold',
+    "unfold.contrib.simple_history",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -43,6 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'metadata',
+    'tenants',
+    'users',
 ]
 
 MIDDLEWARE = [
@@ -56,6 +59,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'data_hub.urls'
+AUTH_USER_MODEL = "users.CustomUser"
 
 TEMPLATES = [
     {
@@ -127,6 +131,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+MEDIA_URL = 'media/'
+MEDIA_ROOT = '/media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -161,16 +170,56 @@ UNFOLD = {
                 ]
             },
             {
-                "title": _("MetaData"),
+                "title": _("Tenants"),
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Data Types"),
-                        "icon": "text_fields",
+                        "title": _("Tenant"),
+                        "icon": 'tenancy',
                         "link": reverse_lazy(
-                            "admin:metadata_datatype_changelist"
+                            "admin:tenants_tenant_changelist"
                         ),
                     },
+                    {
+                        "title": _("Entity"),
+                        "icon": 'fingerprint',
+                        "link": reverse_lazy(
+                            "admin:tenants_entitytype_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Tenant Entity"),
+                        "icon": 'type_specimen',
+                        "link": reverse_lazy(
+                            "admin:tenants_plantentity_changelist"
+                        ),
+                    },
+                ]
+            },
+            {
+                "title": _("Users & Groups"),
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Users"),
+                        "icon": "person",
+                        "link": reverse_lazy(
+                            "admin:users_customuser_changelist"
+                            ),
+                    },
+                    {
+                        "title": _("Groups"),
+                        "icon": "group",
+                        "link": reverse_lazy(
+                            "admin:auth_group_changelist"
+                            ),
+                    }
+                ],
+            },
+            {
+                "title": _("MetaData"),
+                "collapsible": True,
+                "items": [
                     {
                         "title": _("Languages"),
                         "icon": "language",
@@ -179,30 +228,93 @@ UNFOLD = {
                         ),
                     },
                     {
-                        "title": _("Tenants"),
-                        "icon": "tenancy",
-                        "link": reverse_lazy(
-                            "admin:metadata_tenant_changelist"
-                        ),
-                    },
-                    {
                         "title": _("Table Types"),
                         "icon": "data_table",
                         "link": reverse_lazy(
                             "admin:metadata_tabletype_changelist"
                         ),
-                    },                    
+                    },
+                   {
+                        "title": _("Data Types"),
+                        "icon": "text_fields",
+                        "link": reverse_lazy(
+                            "admin:metadata_datatype_changelist"
+                        ),
+                    },
                     {
                         "title": _("Table Fields"),
-                        "icon": "sticky_note_2",
+                        "icon": "view_column",
                         "link": reverse_lazy(
                             "admin:metadata_tablefield_changelist"
                         ),
-                    },  
+                    }, 
+                    {
+                        "title": _("Tenant Table"),
+                        "icon": "table_view",
+                        "link": reverse_lazy(
+                            "admin:metadata_tenanttable_changelist"
+                        ),
+                    },
+                   {
+                        "title": _("Field Order"),
+                        "icon": "reorder",
+                        "link": reverse_lazy(
+                            "admin:metadata_fieldorder_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Tenant Table Field"),
+                        "icon": "table_chart_view",
+                        "link": reverse_lazy(
+                            "admin:metadata_tenanttablefield_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Table Field Localization"),
+                        "icon": "language_international",
+                        "link": reverse_lazy(
+                            "admin:metadata_tablefieldlocalization_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Table Filter"),
+                        "icon": "filter_list",
+                        "link": reverse_lazy(
+                            "admin:metadata_tablefilter_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Filter Items"),
+                        "icon": "category",
+                        "link": reverse_lazy(
+                            "admin:metadata_filteritem_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Filter Localizations"),
+                        "icon": "language_international",
+                        "link": reverse_lazy(
+                            "admin:metadata_filterlocalization_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Filter Items Localizations"),
+                        "icon": "language_international",
+                        "link": reverse_lazy(
+                            "admin:metadata_filteritemlocalization_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Tenant Table Filter"),
+                        "icon": "filter_list",
+                        "link": reverse_lazy(
+                            "admin:metadata_tenanttablefilter_changelist"
+                        ),
+                    },
                 ],
             },
+ 
         ],
     },
 }
         
-            
