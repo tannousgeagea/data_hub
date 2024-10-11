@@ -24,6 +24,9 @@ services:
       - ${FLOWER_PORT}:${FLOWER_PORT}
     env_file: .env
     restart: unless-stopped
+    depends_on:
+      - rabbitmq
+      - postgres
     volumes:
       - .:/home/$user/src
     user: ${user}

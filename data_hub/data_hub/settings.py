@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'metadata',
     'tenants',
     'users',
+    'acceptance_control',
 ]
 
 MIDDLEWARE = [
@@ -313,6 +314,62 @@ UNFOLD = {
                     },
                 ],
             },
+            {
+                "title": _("Acceptance Control"),
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Flag Types"),
+                        "icon": "flag",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_flagtype_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Severities"),
+                        "icon": "grade",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_severity_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Tenant Flag Deployment"),
+                        "icon": "deployed_code",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_tenantflagdeployment_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Deliveries"),
+                        "icon": "local_shipping",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_delivery_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Delivery Flags"),
+                        "icon": "package",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_deliveryflag_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Alarm"),
+                        "icon": "notifications",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_alarm_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Delivery Media"),
+                        "icon": "attach_file",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_deliverymedia_changelist"
+                        ),
+                    },
+                    
+                ]
+            }
  
         ],
     },
