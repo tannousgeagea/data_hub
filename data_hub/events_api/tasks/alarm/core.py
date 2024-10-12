@@ -4,16 +4,15 @@ from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from celery import shared_task
 from datetime import datetime, timezone
-from acceptance_control.models import Delivery
+from acceptance_control.models import Alarm, FlagType, Severity, Delivery
 from tenants.models import Tenant, PlantEntity
 
 @shared_task(bind=True,autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}, ignore_result=True,
-             name='delivery:execute')
+             name='alarm:execute')
 def execute(self, payload, **kwargs):
     data: dict = {}
     try:
         
-        print(payload)
         if not Tenant.objects.filter(domain=payload.tenant_domain).exists():
             raise ObjectDoesNotExist(
                 f"tenant {payload.tenant_domain} does not exist"
@@ -24,25 +23,39 @@ def execute(self, payload, **kwargs):
                 f"Entity {payload.location} does not exist"
             )
             
-            
-        if Delivery.objects.filter(delivery_id=payload.delivery_id).exists():
-            raise IntegrityError(
-                f"delivery_id {payload.delivery_id} already exists"
+        if not FlagType.objects.filter(name=payload.flag_type).exists():
+            raise ObjectDoesNotExist(
+                f"flag type {payload.flag_type} does not exist"
             )
             
+        flag_type = FlagType.objects.get(name=payload.flag_type)
+        if not Severity.objects.filter(flag_type=flag_type, level=payload.severity_level).exists():
+            raise ObjectDoesNotExist(
+                f"severity level {payload.severity_level} for {payload.flag_type} does not exist"
+            )
+
+        if payload.delivery_id:
+            if not Delivery.objects.filter(delivery_id=payload.delivery_id).exists():
+                raise ObjectDoesNotExist(
+                    f"delivery_id {payload.delivery_id} does not exist"
+                )
+                
         tenant = Tenant.objects.get(domain=payload.tenant_domain)
         entity = PlantEntity.objects.get(entity_uid=payload.location)
+        severity = Severity.objects.get(flag_type=flag_type, level=payload.severity_level)
+
         
-        delivery = Delivery(
+        alarm = Alarm(
             tenant=tenant,
             entity=entity,
+            flag_type=flag_type,
+            severity=severity,
+            timestamp=payload.timestamp,
+            event_uid=payload.event_uid,
             delivery_id=payload.delivery_id,
-            delivery_location=payload.location,
-            delivery_start=payload.delivery_start,
-            delivery_end=payload.delivery_end,
         )
         
-        delivery.save()
+        alarm.save()
         data.update(
             {
                 'action': 'done',

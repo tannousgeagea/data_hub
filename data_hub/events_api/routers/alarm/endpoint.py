@@ -15,16 +15,10 @@ from typing_extensions import Annotated
 from fastapi import FastAPI, Depends, APIRouter, Request, Header, Response
 from typing import Callable, Union, Any, Dict, AnyStr, Optional, List
 
-from events_api.tasks.delivery import core
-
-TASKS_DIR = Path(__file__).parent.parent / 'tasks'
-TASKS = {
-    f: f"events_api.tasks.{f.replace('/', '.')}" 
-    for f in os.listdir(TASKS_DIR)
-    if not f.endswith('__pycache__')
-    if not f.endswith('__.py')
-    }
-
+from events_api.tasks import (
+    alarm,
+    alarm_media,
+)
 
 class TimedRoute(APIRoute):
     def get_route_handler(self) -> Callable:
@@ -49,43 +43,73 @@ class ApiResponse(BaseModel):
     data: Optional[Dict[AnyStr, Any]] = None
 
 
-class ApiRequest(BaseModel):
-    request: Optional[Dict[AnyStr, Any]] = None
+class AlarmRequest(BaseModel):
+    tenant_domain: str
+    location: str
+    entity_uid:str
+    flag_type:str
+    severity_level:int
+    timestamp:datetime
+    delivery_id:str=None
+
+class AlarmMediaRequest(BaseModel):
+    event_uid:str
+    media_id:str
+    media_name:str
+    media_type:str
+    media_url:str
 
 
 router = APIRouter(
     prefix="/api/v1",
-    tags=["EventAPI"],
+    tags=["Alarm"],
     route_class=TimedRoute,
     responses={404: {"description": "Not found"}},
 )
 
 @router.api_route(
-    "/event/{event_type}", methods=["POST"], tags=["EventAPI"]
+    "/alarm", methods=["POST"], tags=["Alarm"]
 )
 async def handle_event(
-    event_type: str,
-    payload: ApiRequest = Body(...),
+    payload: AlarmRequest = Body(...),
     x_request_id: Annotated[Optional[str], Header()] = None,
 ) -> ApiResponse:
     
-    if not payload.request:
+    if not payload:
         raise HTTPException(status_code=400, detail="Invalid request payload")
     
-    module = importlib.import_module(TASKS[event_type])
-    task = module.core.execute.apply_async(args=(payload.request, ), task_id=x_request_id)
+    task = alarm.core.execute.apply_async(args=(payload,), task_id=x_request_id)
     response_data = {
         "status": "success",
         "task_id": task.id,
-        "data": payload.request
+        "data": payload.model_dump(),
+    }
+    
+    return ApiResponse(**response_data)
+
+@router.api_route(
+    "/alarm/media", methods=["POST"], tags=["Alarm"]
+)
+async def handle_event(
+    payload: AlarmMediaRequest = Body(...),
+    x_request_id: Annotated[Optional[str], Header()] = None,
+) -> ApiResponse:
+    
+    if not payload:
+        raise HTTPException(status_code=400, detail="Invalid request payload")
+    
+    task = alarm_media.core.execute.apply_async(args=(payload,), task_id=x_request_id)
+    response_data = {
+        "status": "success",
+        "task_id": task.id,
+        "data": payload.model_dump(),
     }
     
     return ApiResponse(**response_data)
 
 
-
 @router.api_route(
-    "/event/{task_id}", methods=["GET"], tags=["EventAPI"], response_model=ApiResponse
+    "/alarm/{task_id}", methods=["GET"], tags=["Alarm"], response_model=ApiResponse
 )
 async def get_event_status(task_id: str, response: Response, x_request_id:Annotated[Optional[str], Header()] = None):
     result = {"status": "received", "task_id": str(uuid.uuid4()), "data": {}}

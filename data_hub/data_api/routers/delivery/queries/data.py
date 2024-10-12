@@ -19,6 +19,7 @@ from pydantic import BaseModel
 django.setup()
 from django.core.exceptions import ObjectDoesNotExist
 from tenants.models import Tenant
+from acceptance_control.models import Delivery, DeliveryFlag, TenantFlagDeployment
 
 class TimedRoute(APIRoute):
     def get_route_handler(self) -> Callable:
@@ -53,6 +54,11 @@ description = """
 def get_delivery_data(
     response: Response, 
     tenant_domain:str,
+    location:str='all',
+    from_date:datetime=None,
+    to_date:datetime=None,
+    items_per_page:int=15,
+    page:int=1,
     ):
     results = {}
     try:
@@ -68,6 +74,66 @@ def get_delivery_data(
             response.status_code = status.HTTP_404_NOT_FOUND
             return results
         
+        today = datetime.today()
+        if from_date is None:
+            from_date = datetime(today.year, today.month, today.day)
+        
+        if to_date is None:
+            to_date = from_date + timedelta(days=1)
+            
+        from_date = from_date.replace(tzinfo=timezone.utc)
+        to_date = to_date.replace(tzinfo=timezone.utc) + timedelta(days=1)
+        
+        
+        if page < 1:
+            page = 1
+        
+        if items_per_page<=0:
+            results['error'] = {
+                'status_code': 400,
+                'status_description': f'Bad Request, items_per_pages should not be 0',
+                'detail': "division by zero."
+            }
+
+            response.status_code = status.HTTP_400_BAD_REQUEST    
+            return results
+        
+        lookup_filters = Q()
+        lookup_filters &= Q(created_at__range=(from_date, to_date ))
+        if not location=='all':
+            lookup_filters &= Q(delivery_location=location)
+        
+        deliveries = Delivery.objects.filter(lookup_filters)
+        rows = []
+        total_record = len(deliveries)
+        for delivery in deliveries[(page - 1) * items_per_page:page * items_per_page]:
+            row = {
+                "delivery_id": str(delivery.id).zfill(6),
+                "delivery_date": delivery.created_at.strftime('%Y-%m-%d'),
+                "start_time": delivery.delivery_start.strftime("%H:%M:%S"),
+                "end_time": delivery.delivery_end.strftime("%H:%M:%S"),
+                "location": delivery.delivery_location,
+                }
+
+            flags = DeliveryFlag.objects.filter(delivery=delivery)
+            for flag in flags:
+                row.update(
+                    {
+                        flag.flag_type.name: flag.severity.unicode_char
+                    }
+                )
+                
+            rows.append(
+                row
+            )
+        
+        results['data'] = {
+            "type": "collection",
+            "total_record": total_record,
+            "filters": lookup_filters,
+            "pages": math.ceil(total_record / items_per_page),
+            "items": rows,
+        }
         results['status_code'] = "ok"
         results["detail"] = "data retrieved successfully"
         results["status_description"] = "OK"
