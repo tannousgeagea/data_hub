@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from acceptance_control.models import Alarm, Media
 
 @shared_task(bind=True,autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}, ignore_result=True,
-             name='alarm:execute')
+             name='alarm_media:execute')
 def execute(self, payload, **kwargs):
     data: dict = {}
     try:

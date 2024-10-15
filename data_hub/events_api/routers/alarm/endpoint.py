@@ -46,7 +46,7 @@ class ApiResponse(BaseModel):
 class AlarmRequest(BaseModel):
     tenant_domain: str
     location: str
-    entity_uid:str
+    event_uid:str
     flag_type:str
     severity_level:int
     timestamp:datetime
