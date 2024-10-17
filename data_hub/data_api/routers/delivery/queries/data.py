@@ -98,7 +98,9 @@ def get_delivery_data(
             response.status_code = status.HTTP_400_BAD_REQUEST    
             return results
         
+        tenant = Tenant.objects.get(domain=tenant_domain)
         lookup_filters = Q()
+        lookup_filters &= Q(tenant=tenant)
         lookup_filters &= Q(created_at__range=(from_date, to_date ))
         if not location=='all':
             lookup_filters &= Q(delivery_location=location)
@@ -108,6 +110,7 @@ def get_delivery_data(
         total_record = len(deliveries)
         for delivery in deliveries[(page - 1) * items_per_page:page * items_per_page]:
             row = {
+                "id": delivery.id,
                 "delivery_id": str(delivery.id).zfill(6),
                 "delivery_date": delivery.created_at.strftime('%Y-%m-%d'),
                 "start_time": delivery.delivery_start.strftime("%H:%M:%S"),
@@ -115,13 +118,25 @@ def get_delivery_data(
                 "location": delivery.delivery_location,
                 }
 
-            flags = DeliveryFlag.objects.filter(delivery=delivery)
-            for flag in flags:
-                row.update(
-                    {
-                        flag.flag_type.name: flag.severity.unicode_char
-                    }
-                )
+
+            flags_deployment = TenantFlagDeployment.objects.filter(tenant=tenant)
+            for flag in flags_deployment:
+                flags = DeliveryFlag.objects.filter(delivery=delivery, flag_type=flag.flag_type)
+                if not flags:
+                    row.update(
+                        {
+                            flag.flag_type.name: '⬜',
+                        }
+                    )
+                    
+                    continue
+                
+                for flag in flags:
+                    row.update(
+                        {
+                            flag.flag_type.name: flag.severity.unicode_char
+                        }
+                    )
                 
             rows.append(
                 row

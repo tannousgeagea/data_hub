@@ -179,6 +179,8 @@ def get_metadata(
             col[table_field.field.name] = {
                 "title": localization.title,
                 "type": table_field.field.type.type,
+                "field_key": table_field.field.name,
+                "hidden": table_field.is_hidden,
                 "description": localization.description,
             }
         
@@ -188,7 +190,7 @@ def get_metadata(
             tenant_table=tenant_table
         )
         
-        filters = {}
+        filters = []
         for tenant_table_filter in tenant_table_filters:
             if not FilterLocalization.objects.filter(
                 language=lang,
@@ -210,29 +212,41 @@ def get_metadata(
                 table_filter=tenant_table_filter.table_filter
             )
             
-            filters[tenant_table_filter.table_filter.filter_name] = {
-                "title": localization.title,
-                "type": tenant_table_filter.table_filter.type,
-                "description": localization.description,
-                "placeholder": localization.placeholder,
-            }
-
-            filter_items = FilterItem.objects.filter(
-                table_filter=tenant_table_filter.table_filter
-            ).order_by('field_order')
-        
-            filters[tenant_table_filter.table_filter.filter_name].update(
-                {  
-                    'default': filter_items.first().item_key,
-                    'items': {
-                        filter_item.item_key: FilterItemLocalization.objects.get(
-                            language=lang, filter_item=filter_item
-                            ).item_value
-                        for filter_item in filter_items
+            filters.append(
+                {   
+                    "filter_key": tenant_table_filter.table_filter.filter_name,
+                    "title": localization.title,
+                    "type": tenant_table_filter.table_filter.type,
+                    "description": localization.description,
+                    "placeholder": localization.placeholder,
+                    "items": [
+                        {
+                            "key": filter_item.item_key,
+                            "value": FilterItemLocalization.objects.get(
+                                language=lang, filter_item=filter_item
+                                ).item_value,
+                        } for filter_item in FilterItem.objects.filter(table_filter=tenant_table_filter.table_filter).order_by('field_order') 
                         if FilterItemLocalization.objects.filter(language=lang, filter_item=filter_item).exists()
-                    }
+                    ]
                 }
             )
+
+            # filter_items = FilterItem.objects.filter(
+            #     table_filter=tenant_table_filter.table_filter
+            # ).order_by('field_order')
+        
+            # filters[tenant_table_filter.table_filter.filter_name].update(
+            #     {  
+            #         'default': filter_items.first().item_key,
+            #         'items': {
+            #             filter_item.item_key: FilterItemLocalization.objects.get(
+            #                 language=lang, filter_item=filter_item
+            #                 ).item_value
+            #             for filter_item in filter_items
+            #             if FilterItemLocalization.objects.filter(language=lang, filter_item=filter_item).exists()
+            #         }
+            #     }
+            # )
                 
                 
         results['metadata'] = {

@@ -121,7 +121,7 @@ class Alarm(models.Model):
     severity = models.ForeignKey(Severity, on_delete=models.RESTRICT)
     timestamp = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
-    event_uid = models.CharField(max_length=255)
+    event_uid = models.CharField(max_length=255, unique=True)
     delivery_id = models.CharField(max_length=255, null=True, blank=True)
     
     class Meta:
@@ -130,3 +130,14 @@ class Alarm(models.Model):
         
     def __str__(self):
         return f"Alarm {self.event_uid} for {self.tenant}"
+    
+class AlarmMedia(models.Model):
+    alarm = models.ForeignKey(Alarm, on_delete=models.RESTRICT)
+    media = models.ForeignKey(Media, on_delete=models.RESTRICT)
+    
+    class Meta:
+        db_table = 'alarm_media'
+        verbose_name_plural = 'Alarm Media'
+        
+    def __str__(self):
+        return f"{self.alarm}: {self.media}"

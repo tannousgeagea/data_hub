@@ -361,10 +361,24 @@ UNFOLD = {
                         ),
                     },
                     {
+                        "title": _("Media"),
+                        "icon": "play_arrow",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_media_changelist"
+                        ),
+                    },
+                    {
                         "title": _("Delivery Media"),
                         "icon": "attach_file",
                         "link": reverse_lazy(
                             "admin:acceptance_control_deliverymedia_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Alarm Media"),
+                        "icon": "attach_file",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_alarmmedia_changelist"
                         ),
                     },
                     

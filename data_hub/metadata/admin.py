@@ -1,11 +1,31 @@
 
 from django.contrib import admin
-from unfold.admin import ModelAdmin
+from unfold.admin import ModelAdmin, TabularInline, StackedInline
 from .models import (
     Language, TableType, DataType, TableField, TenantTable, FieldOrder,
     TenantTableField, TableFieldLocalization, TableFilter, FilterItem,
     FilterLocalization, FilterItemLocalization, TenantTableFilter
 )
+
+class TableFieldLocalizationInline(TabularInline):
+    model = TableFieldLocalization
+    extra = 1
+
+class TenantTableFieldInline(TabularInline):
+    model = TenantTableField
+    extra = 1
+
+class FilterItemInline(TabularInline):
+    model = FilterItem
+    extra = 1
+
+class FilterLocalizationInline(TabularInline):
+    model = FilterLocalization
+    extra = 1
+
+class FilterItemLocalizationInline(TabularInline):
+    model = FilterItemLocalization
+    extra = 1
 
 @admin.register(Language)
 class LanguageAdmin(ModelAdmin):
@@ -31,6 +51,7 @@ class TableFieldAdmin(ModelAdmin):
     search_fields = ('name',)
     list_filter = ('type',)
     ordering = ('-created_at',)
+    inlines = [TableFieldLocalizationInline]
 
 @admin.register(TenantTable)
 class TenantTableAdmin(ModelAdmin):
@@ -38,6 +59,7 @@ class TenantTableAdmin(ModelAdmin):
     search_fields = ('tenant__tenant_name', 'table_type__name')
     list_filter = ('is_active',)
     ordering = ('-created_at',)
+    inlines = [TenantTableFieldInline]
 
 @admin.register(FieldOrder)
 class FieldOrderAdmin(ModelAdmin):
@@ -62,6 +84,7 @@ class TableFilterAdmin(ModelAdmin):
     search_fields = ('filter_name', 'type')
     list_filter = ('is_active',)
     ordering = ('-created_at',)
+    inlines = [FilterItemInline]
 
 @admin.register(FilterItem)
 class FilterItemAdmin(ModelAdmin):
@@ -69,6 +92,7 @@ class FilterItemAdmin(ModelAdmin):
     search_fields = ('item_key',)
     list_filter = ('is_active',)
     ordering = ('-created_at',)
+    inlines = [FilterItemLocalizationInline]
 
 @admin.register(FilterLocalization)
 class FilterLocalizationAdmin(ModelAdmin):
@@ -87,3 +111,4 @@ class TenantTableFilterAdmin(ModelAdmin):
     list_display = ('tenant_table', 'table_filter', 'created_at')
     search_fields = ('tenant_table__tenant__tenant_name', 'table_filter__filter_name')
     ordering = ('-created_at',)
+    list_filter = ('tenant_table__tenant__tenant_name', 'table_filter__filter_name')
