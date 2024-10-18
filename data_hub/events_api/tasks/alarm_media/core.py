@@ -4,7 +4,7 @@ from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from celery import shared_task
 from datetime import datetime, timezone
-from acceptance_control.models import Alarm, Media
+from acceptance_control.models import Alarm, Media, AlarmMedia
 
 @shared_task(bind=True,autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}, ignore_result=True,
              name='alarm_media:execute')
@@ -26,14 +26,13 @@ def execute(self, payload, **kwargs):
         )
         media.save()
         
-        # alarm_media = Alarm(
-        #     media=media,
-        #     alarm=alarm
-        # )
+        alarm_media = AlarmMedia(
+            media=media,
+            alarm=alarm
+        )
         
-        # alarm_media.save()
+        alarm_media.save()
         
-        alarm.save()
         data.update(
             {
                 'action': 'done',
