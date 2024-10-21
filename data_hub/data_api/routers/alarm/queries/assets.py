@@ -123,7 +123,7 @@ def get_delivery_assets(response: Response, event_uid:str):
             response.status_code = status.HTTP_404_NOT_FOUND
             return results
             
-        alarm = Alarm.objects.get(delivery_id=event_uid)
+        alarm = Alarm.objects.get(event_uid=event_uid)
         alarm_media = AlarmMedia.objects.filter(alarm=alarm)
         
         results['alarm'] = {

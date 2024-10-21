@@ -138,6 +138,7 @@ def get_delivery_data(
         
         table_type = TableType.objects.get(name='alarm')
         tenant = Tenant.objects.get(domain=tenant_domain)
+        
         if not TenantTable.objects.filter(tenant=tenant, table_type=table_type):
             results = {
                 "error": {
@@ -190,7 +191,7 @@ def get_delivery_data(
                 "event_date": alarm.created_at.strftime('%Y-%m-%d'),
                 "start_time": alarm.timestamp.strftime("%H:%M:%S"),
                 "end_time": alarm.timestamp.strftime("%H:%M:%S"),
-                "location": '',
+                "location": alarm.entity.entity_uid,
                 }
                 
             rows.append(
