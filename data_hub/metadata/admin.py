@@ -69,7 +69,7 @@ class FieldOrderAdmin(ModelAdmin):
 class TenantTableFieldAdmin(ModelAdmin):
     list_display = ('tenant_table', 'field', 'is_active', 'created_at')
     search_fields = ('tenant_table__tenant__tenant_name', 'field__name')
-    list_filter = ('is_active',)
+    list_filter = ('is_active', 'tenant_table__tenant__tenant_name', "tenant_table__table_type__name")
     ordering = ('-created_at',)
 
 @admin.register(TableFieldLocalization)

@@ -19,9 +19,10 @@ def execute(self, payload, **kwargs):
                 f"tenant {payload.tenant_domain} does not exist"
             )
             
-        if not PlantEntity.objects.filter(entity_uid=payload.location).exists():
+        tenant = Tenant.objects.get(domain=payload.tenant_domain)
+        if not PlantEntity.objects.filter(entity_uid=payload.location, entity_type__tenant=tenant).exists():
             raise ObjectDoesNotExist(
-                f"Entity {payload.location} does not exist"
+                f"Entity {payload.location} for {tenant.domain} does not exist"
             )
             
             
@@ -30,16 +31,15 @@ def execute(self, payload, **kwargs):
                 f"delivery_id {payload.delivery_id} already exists"
             )
             
-        tenant = Tenant.objects.get(domain=payload.tenant_domain)
-        entity = PlantEntity.objects.get(entity_uid=payload.location)
+        entity = PlantEntity.objects.get(entity_uid=payload.location, entity_type__tenant=tenant)
         
         delivery = Delivery(
             tenant=tenant,
             entity=entity,
             delivery_id=payload.delivery_id,
             delivery_location=payload.location,
-            delivery_start=payload.delivery_start,
-            delivery_end=payload.delivery_end,
+            delivery_start=payload.delivery_start.replace(tzinfo=timezone.utc),
+            delivery_end=payload.delivery_end.replace(tzinfo=timezone.utc),
         )
         
         delivery.save()

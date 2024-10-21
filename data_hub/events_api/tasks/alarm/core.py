@@ -18,7 +18,8 @@ def execute(self, payload, **kwargs):
                 f"tenant {payload.tenant_domain} does not exist"
             )
             
-        if not PlantEntity.objects.filter(entity_uid=payload.location).exists():
+        tenant = Tenant.objects.get(domain=payload.tenant_domain)
+        if not PlantEntity.objects.filter(entity_uid=payload.location, entity_type__tenant=tenant).exists():
             raise ObjectDoesNotExist(
                 f"Entity {payload.location} does not exist"
             )
@@ -40,8 +41,7 @@ def execute(self, payload, **kwargs):
                     f"delivery_id {payload.delivery_id} does not exist"
                 )
                 
-        tenant = Tenant.objects.get(domain=payload.tenant_domain)
-        entity = PlantEntity.objects.get(entity_uid=payload.location)
+        entity = PlantEntity.objects.get(entity_uid=payload.location, entity_type__tenant=tenant)
         severity = Severity.objects.get(flag_type=flag_type, level=payload.severity_level)
 
         
@@ -50,7 +50,7 @@ def execute(self, payload, **kwargs):
             entity=entity,
             flag_type=flag_type,
             severity=severity,
-            timestamp=payload.timestamp,
+            timestamp=payload.timestamp.replace(tzinfo=timezone.utc),
             event_uid=payload.event_uid,
             delivery_id=payload.delivery_id,
         )
