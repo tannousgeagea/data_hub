@@ -182,7 +182,7 @@ def get_delivery_data(
         # #         lookup_filters &= Q((g_filter, given_filters[g_filter][0]))
         
         rows = []
-        alarms = Alarm.objects.filter(lookup_filters)
+        alarms = Alarm.objects.filter(lookup_filters).order_by('-created_at')
         total_record = len(alarms)
         for alarm in alarms[(page - 1) * items_per_page:page * items_per_page]:
             row = {
@@ -192,6 +192,8 @@ def get_delivery_data(
                 "start_time": alarm.timestamp.strftime("%H:%M:%S"),
                 "end_time": alarm.timestamp.strftime("%H:%M:%S"),
                 "location": alarm.entity.entity_uid,
+                "event_name": alarm.flag_type.name,
+                "severity_level": alarm.severity.unicode_char,
                 }
                 
             rows.append(

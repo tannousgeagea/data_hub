@@ -140,56 +140,68 @@ def get_delivery_assets(response: Response, delivery_id:str):
         for media in delivery_media:
             media.media.media_url
         
-        results['delivery'] = {
-            'title': "Nachschau",
-            'items': {
-                'snapshots': {
-                    'title': 'Aktivität',
-                    'type': 'image',
-                    'data': [
-                        {
-                            'url': media.media.media_url,
-                            'name': media.media.media_name,
-                            'time': media.media.created_at.strftime(DATETIME_FORMAT),
-                        } for media in delivery_media if media.media.media_type == "image"
-                    ]
-                },
-                'videos': {
-                    'title': 'Zeitrafferaufnahme',
-                    'type': 'video',
-                    'data': [
-                        {
-                            'url': media.media.media_url,
-                            'name': media.media.media_name,
-                            'time': media.media.created_at.strftime(DATETIME_FORMAT),
-                        } for media in delivery_media if media.media.media_type == "video"
-                    ]
-                }
-            }
-        }
+        results['categories'] = [
+            {
+                'key': 'preview',
+                'name': "Nachshau",
+            },
+            {
+                'key': 'analytics',
+                'name': "Auffälligkeiten",
+            },
+        ]
         
-        results['analytics'] = {
-            "title": "Auffälligkeiten",
-            "items": {
-                'snapshots': {
-                    "title": "Prob. Langteile Aufnahme",
-                    "type": "image",
-                    "data": [
-                        {
-                            'url': media.media.media_url,
-                            'name': media.media.media_name,
-                            'time': media.media.created_at.strftime(DATETIME_FORMAT),
-                        } for media in delivery_media if media.media.media_type == "image"
-                    ]
-                }
-            }
-        }
-        
-        
-        # results['analytics'] = query_flag_assets(delivery_id=delivery_id, snapshots_dir=snapshots_dir, videos_dir=videos_dir, long_object_severity_level=delivery.meta_info.get('long_object_severity_level', 0))
-        
-        
-        connection.close()
+        results['data'] = [
+            {
+                'title': "Nachschau",
+                "key":"preview",
+                'items': [
+                    {
+                        'title': 'Aktivität',
+                        "key":"snapshots",
+                        'type': 'image',
+                        'data': [
+                            {
+                                'url': media.media.media_url,
+                                'name': media.media.media_name,
+                                'time': media.media.created_at.strftime(DATETIME_FORMAT),
+                            } for media in delivery_media if media.media.media_type == "image"
+                        ]
+                    },
+                    {
+                        'title': 'Zeitrafferaufnahme',
+                        "key":"videos",
+                        'type': 'video',
+                        'data': [
+                            {
+                                'url': media.media.media_url,
+                                'name': media.media.media_name,
+                                'time': media.media.created_at.strftime(DATETIME_FORMAT),
+                            } for media in delivery_media if media.media.media_type == "video"
+                        ]
+                    }
+                ]
+            },
+            {
+                "title": "Auffälligkeiten",
+                "key": 'analytics',
+                "items": [
+                    {
+                        "title": "Prob. Langteile Aufnahme",
+                        "key": "impurity_snapshots",
+                        "type": "image",
+                        "data": [
+                            {
+                                'url': media.media.media_url,
+                                'name': media.media.media_name,
+                                'time': media.media.created_at.strftime(DATETIME_FORMAT),
+                            } for media in delivery_media if media.media.media_type == "image"
+                        ]
+                    },
+                ]
+            },
+        ]
+
         return results    
     
     except HTTPException as e:

@@ -126,33 +126,45 @@ def get_delivery_assets(response: Response, event_uid:str):
         alarm = Alarm.objects.get(event_uid=event_uid)
         alarm_media = AlarmMedia.objects.filter(alarm=alarm)
         
-        results['alarm'] = {
-            'title': "Nachschau",
-            'items': {
-                'snapshots': {
-                    'title': 'Aktivität',
-                    'type': 'image',
-                    'data': [
-                        {
-                            'url': media.media.media_url,
-                            'name': media.media.media_name,
-                            'time': media.media.created_at.strftime(DATETIME_FORMAT),
-                        } for media in alarm_media if media.media.media_type == "image"
-                    ]
-                },
-                'videos': {
-                    'title': 'Zeitrafferaufnahme',
-                    'type': 'video',
-                    'data': [
-                        {
-                            'url': media.media.media_url,
-                            'name': media.media.media_name,
-                            'time': media.media.created_at.strftime(DATETIME_FORMAT),
-                        } for media in alarm_media if media.media.media_type == "video"
-                    ]
-                }
+        results['categories'] = [
+            {
+                'key': 'preview',
+                'name': "Nachshau",
             }
-        }
+        ]
+        
+        results['data'] = [
+            {
+                'title': "Nachschau",
+                "key":"preview",
+                'items': [
+                    {
+                        'title': 'Aktivität',
+                        'key': 'snapshots',
+                        'type': 'image',
+                        'data': [
+                            {
+                                'url': media.media.media_url,
+                                'name': media.media.media_name,
+                                'time': media.media.created_at.strftime(DATETIME_FORMAT),
+                            } for media in alarm_media if media.media.media_type == "image"
+                        ]
+                    },
+                    {
+                        'title': 'Zeitrafferaufnahme',
+                        'key': "videos",
+                        'type': 'video',
+                        'data': [
+                            {
+                                'url': media.media.media_url,
+                                'name': media.media.media_name,
+                                'time': media.media.created_at.strftime(DATETIME_FORMAT),
+                            } for media in alarm_media if media.media.media_type == "video"
+                        ]
+                    }
+                ]
+            }
+        ]
 
         
         

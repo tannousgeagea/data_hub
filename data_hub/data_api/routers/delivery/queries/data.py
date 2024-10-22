@@ -105,7 +105,7 @@ def get_delivery_data(
         if not location=='all':
             lookup_filters &= Q(delivery_location=location)
         
-        deliveries = Delivery.objects.filter(lookup_filters)
+        deliveries = Delivery.objects.filter(lookup_filters).order_by('-created_at')
         rows = []
         total_record = len(deliveries)
         for delivery in deliveries[(page - 1) * items_per_page:page * items_per_page]:
