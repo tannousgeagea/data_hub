@@ -40,11 +40,17 @@ def execute(self, payload, **kwargs):
                 raise ObjectDoesNotExist(
                     f"delivery_id {payload.delivery_id} does not exist"
                 )
+
+        if Alarm.objects.filter(event_uid=payload.event_uid).exists():
+            return {
+                'action': "ignored",
+                "time": datetime.now().strftime("%Y-%m-%d %H-%M-%S"),
+                "result": f"{payload.event_uid} exists"
+            }
                 
         entity = PlantEntity.objects.get(entity_uid=payload.location, entity_type__tenant=tenant)
         severity = Severity.objects.get(flag_type=flag_type, level=payload.severity_level)
 
-        
         alarm = Alarm(
             tenant=tenant,
             entity=entity,

@@ -76,12 +76,17 @@ class TenantFlagDeploymentAdmin(ModelAdmin):
 
 @admin.register(Alarm)
 class AlarmAdmin(ModelAdmin):
-    list_display = ('tenant', "entity", "flag_type", "severity", "delivery_id")
+    list_display = ('tenant', "entity", "flag_type", "severity", "delivery_id", "created_at")
     search_fields = ("event_uid", "delivery_id")
-    list_filter = ('tenant__tenant_name', "flag_type__name")
+    list_filter = ('tenant__tenant_name', "flag_type__name", "entity__entity_uid", "created_at")
     
 @admin.register(AlarmMedia)
 class AlarmMediaAdmin(ModelAdmin):
-    list_display = ("alarm", "media")
+    list_display = ("alarm", "media", "show_created_at")
     search_fields = ("alarm__event_uid", "alarm__delivery_id")
     list_filter = ("alarm__tenant__tenant_name", "alarm__flag_type__name")
+    
+    def show_created_at(self, obj):
+        return obj.media.created_at
+    
+    show_created_at.short_description = "Created at"

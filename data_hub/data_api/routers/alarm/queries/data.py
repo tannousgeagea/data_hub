@@ -47,6 +47,11 @@ filter_mapping = {
 }
 
 
+localizations = {
+    'impurity': "Störtoff",
+    'hotspot': 'Hotspot'
+}
+
 class TimedRoute(APIRoute):
     def get_route_handler(self) -> Callable:
         original_route_handler = super().get_route_handler()
@@ -192,7 +197,7 @@ def get_delivery_data(
                 "start_time": alarm.timestamp.strftime("%H:%M:%S"),
                 "end_time": alarm.timestamp.strftime("%H:%M:%S"),
                 "location": alarm.entity.entity_uid,
-                "event_name": alarm.flag_type.name,
+                "event_name": localizations.get(alarm.flag_type.name),
                 "severity_level": alarm.severity.unicode_char,
                 }
                 

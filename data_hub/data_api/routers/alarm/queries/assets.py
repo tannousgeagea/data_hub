@@ -129,13 +129,13 @@ def get_delivery_assets(response: Response, event_uid:str):
         results['categories'] = [
             {
                 'key': 'preview',
-                'name': "Nachshau",
+                'name': "Bildaufnahme ",
             }
         ]
         
         results['data'] = [
             {
-                'title': "Nachschau",
+                'title': "Bildaufnahme ",
                 "key":"preview",
                 'items': [
                     {
