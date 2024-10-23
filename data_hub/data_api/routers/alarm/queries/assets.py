@@ -23,6 +23,7 @@ from acceptance_control.models import (
     )
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+AzAccoutKey = os.get('AzAccoutKey')
 
 class TimedRoute(APIRoute):
     def get_route_handler(self) -> Callable:
@@ -144,7 +145,7 @@ def get_delivery_assets(response: Response, event_uid:str):
                         'type': 'image',
                         'data': [
                             {
-                                'url': media.media.media_url,
+                                'url': f"{media.media.media_url}?{AzAccoutKey}",
                                 'name': media.media.media_name,
                                 'time': media.media.created_at.strftime(DATETIME_FORMAT),
                             } for media in alarm_media if media.media.media_type == "image"

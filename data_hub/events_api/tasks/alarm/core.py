@@ -35,11 +35,11 @@ def execute(self, payload, **kwargs):
                 f"severity level {payload.severity_level} for {payload.flag_type} does not exist"
             )
 
-        if payload.delivery_id:
-            if not Delivery.objects.filter(delivery_id=payload.delivery_id).exists():
-                raise ObjectDoesNotExist(
-                    f"delivery_id {payload.delivery_id} does not exist"
-                )
+        # if payload.delivery_id:
+        #     if not Delivery.objects.filter(delivery_id=payload.delivery_id).exists():
+        #         raise ObjectDoesNotExist(
+        #             f"delivery_id {payload.delivery_id} does not exist"
+        #         )
 
         if Alarm.objects.filter(event_uid=payload.event_uid).exists():
             return {
