@@ -23,7 +23,7 @@ from acceptance_control.models import (
     )
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-AzAccoutKey = os.get('AzAccoutKey')
+AzAccoutKey = os.getenv('AzAccoutKey')
 
 class TimedRoute(APIRoute):
     def get_route_handler(self) -> Callable:
