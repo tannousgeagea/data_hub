@@ -156,6 +156,7 @@ def get_metadata(
         
         table_fields = TenantTableField.objects.filter(
             tenant_table=tenant_table,
+            is_active=True,
         ).order_by('field_order__field_position')
         
         for table_field in table_fields:
