@@ -134,6 +134,12 @@ def get_delivery_assets(response: Response, event_uid:str):
             }
         ]
         
+        placeholder = {
+            'url': f"https://wacoreblob.blob.core.windows.net/amk/placeholder.png?{AzAccoutKey}",
+            'name': "Bild in Vorbereitung",
+            'time': (datetime.now() + timedelta(hours=2)).strftime(DATETIME_FORMAT),
+            }
+        
         results['data'] = [
             {
                 'title': "Bildaufnahme ",
@@ -149,7 +155,7 @@ def get_delivery_assets(response: Response, event_uid:str):
                                 'name': media.media.media_name,
                                 'time': media.media.created_at.strftime(DATETIME_FORMAT),
                             } for media in alarm_media if media.media.media_type == "image"
-                        ]
+                        ] if len(alarm_media) else [placeholder]
                     },
                     {
                         'title': 'Zeitrafferaufnahme',
@@ -166,8 +172,6 @@ def get_delivery_assets(response: Response, event_uid:str):
                 ]
             }
         ]
-
-        
         
         # results['analytics'] = query_flag_assets(delivery_id=delivery_id, snapshots_dir=snapshots_dir, videos_dir=videos_dir, long_object_severity_level=delivery.meta_info.get('long_object_severity_level', 0))
         

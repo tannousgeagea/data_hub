@@ -15,6 +15,13 @@ from fastapi import APIRouter
 from fastapi import HTTPException
 from fastapi.routing import APIRoute
 from pydantic import BaseModel
+from common_utils.timezone_utils.timeloc import (
+    get_location_and_timezone,
+    convert_to_local_time,
+)
+
+
+timezone_str = get_location_and_timezone()
 
 django.setup()
 from django.core.exceptions import ObjectDoesNotExist
@@ -49,7 +56,9 @@ filter_mapping = {
 
 localizations = {
     'impurity': "Störtoff",
-    'hotspot': 'Hotspot'
+    'hotspot': 'Hotspot',
+    'gate03': 'Tor 3',
+    'gate04': 'Tor 4',
 }
 
 class TimedRoute(APIRoute):
@@ -194,9 +203,9 @@ def get_delivery_data(
                 "id": alarm.id,
                 "event_uid": alarm.event_uid,
                 "event_date": alarm.created_at.strftime('%Y-%m-%d'),
-                "start_time": alarm.timestamp.strftime("%H:%M:%S"),
-                "end_time": alarm.timestamp.strftime("%H:%M:%S"),
-                "location": alarm.entity.entity_uid,
+                "start_time": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
+                "end_time": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
+                "location": localizations.get(alarm.entity.entity_uid),
                 "event_name": localizations.get(alarm.flag_type.name),
                 "severity_level": alarm.severity.unicode_char,
                 }
