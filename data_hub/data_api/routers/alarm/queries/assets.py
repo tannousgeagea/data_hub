@@ -22,6 +22,16 @@ from acceptance_control.models import (
     AlarmMedia,
     )
 
+from metadata.models import (
+    TableType,
+    Language,
+    TenantTable,
+    TenantTableAsset,
+    TableAssetItem,
+    TableAssetLocalization,
+    TableAssetItemLocalization,
+)
+
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 AzAccoutKey = os.getenv('AzAccoutKey')
 
@@ -106,6 +116,7 @@ This API is used to fetch comprehensive information and analytics related to a s
 def get_delivery_assets(response: Response, event_uid:str):
     results = {}
     try:
+        language = Language.objects.get(code='de')
         if event_uid == 'null':
             results['error'] = {
                 'status_code': "bad-request",
@@ -126,13 +137,15 @@ def get_delivery_assets(response: Response, event_uid:str):
             
         alarm = Alarm.objects.get(event_uid=event_uid)
         alarm_media = AlarmMedia.objects.filter(alarm=alarm)
-        
-        results['categories'] = [
-            {
-                'key': 'preview',
-                'name': "Bildaufnahme ",
-            }
-        ]
+
+        tenant = alarm.tenant
+        table_assets = TenantTableAsset.objects.filter(
+            tenant_table=TenantTable.objects.get(
+                tenant=tenant,
+                table_type=TableType.objects.get(name='alarm'),
+            ),
+            is_active=True,
+        )
         
         placeholder = {
             'url': f"https://wacoreblob.blob.core.windows.net/amk/placeholder.png?{AzAccoutKey}",
@@ -140,42 +153,48 @@ def get_delivery_assets(response: Response, event_uid:str):
             'time': (datetime.now() + timedelta(hours=2)).strftime(DATETIME_FORMAT),
             }
         
-        results['data'] = [
-            {
-                'title': "Bildaufnahme ",
-                "key":"preview",
-                'items': [
+        
+        categories = []
+        data = []
+        
+        for table_asset in table_assets:
+            categories.append(
+                {
+                    'key': table_asset.table_asset.key,
+                    'name': TableAssetLocalization.objects.get(asset=table_asset.table_asset, language=language).title if TableAssetLocalization.objects.filter(asset=table_asset.table_asset, language=language) else table_asset.table_asset.key,
+                }
+            )
+            
+            items = []
+            table_asset_items = TableAssetItem.objects.filter(asset=table_asset.table_asset, is_active=True)
+            for item in table_asset_items:
+                items.append(
                     {
-                        'title': 'Aktivität',
-                        'key': 'snapshots',
-                        'type': 'image',
+                        'key': item.key,
+                        'title': TableAssetItemLocalization.objects.get(asset_item=item, language=language).title if TableAssetItemLocalization.objects.filter(asset_item=item, language=language) else item.name,
+                        'type': item.media_type,
                         'data': [
                             {
                                 'url': f"{media.media.media_url}?{AzAccoutKey}",
                                 'name': media.media.media_name,
                                 'time': media.media.created_at.strftime(DATETIME_FORMAT),
-                            } for media in alarm_media if media.media.media_type == "image"
+                            } for media in alarm_media if media.media.media_type == item.media_type
                         ] if len(alarm_media) else [placeholder]
                     },
-                    {
-                        'title': 'Zeitrafferaufnahme',
-                        'key': "videos",
-                        'type': 'video',
-                        'data': [
-                            {
-                                'url': media.media.media_url,
-                                'name': media.media.media_name,
-                                'time': media.media.created_at.strftime(DATETIME_FORMAT),
-                            } for media in alarm_media if media.media.media_type == "video"
-                        ]
-                    }
-                ]
-            }
-        ]
+                )
+            
+            data.append(
+                {
+                    "key": table_asset.table_asset.key,
+                    "title":  TableAssetLocalization.objects.get(asset=table_asset.table_asset, language=language).title if TableAssetLocalization.objects.filter(asset=table_asset.table_asset, language=language) else table_asset.table_asset.key,
+                    "items": items,
+                }
+            )
         
-        # results['analytics'] = query_flag_assets(delivery_id=delivery_id, snapshots_dir=snapshots_dir, videos_dir=videos_dir, long_object_severity_level=delivery.meta_info.get('long_object_severity_level', 0))
-        
-        
+        results = {
+            "categories": categories,
+            "data": data,
+        }
         connection.close()
         return results    
     

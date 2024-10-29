@@ -5,6 +5,7 @@ from .models import (
     Delivery, 
     DeliveryMedia, 
     FlagType,
+    FlagTypeLocalization,
     Severity, 
     DeliveryFlag, 
     TenantFlagDeployment,
@@ -51,6 +52,11 @@ class FlagTypeAdmin(ModelAdmin):
     list_display = ('name', 'description', 'created_at')
     search_fields = ('name',)
     readonly_fields = ('created_at',)
+
+@admin.register(FlagTypeLocalization)
+class FlagTypeLocalizationAdmin(ModelAdmin):
+    list_display = ('flag_type', 'language', 'title', 'created_at')
+    list_filter = ('flag_type', )
 
 # Admin for Severity Model
 @admin.register(Severity)

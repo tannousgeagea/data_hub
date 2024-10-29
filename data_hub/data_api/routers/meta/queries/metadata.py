@@ -188,7 +188,8 @@ def get_metadata(
         
         print('hello')
         tenant_table_filters = TenantTableFilter.objects.filter(
-            tenant_table=tenant_table
+            tenant_table=tenant_table,
+            is_active=True,
         )
         
         filters = []

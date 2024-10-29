@@ -4,8 +4,14 @@ from unfold.admin import ModelAdmin, TabularInline, StackedInline
 from .models import (
     Language, TableType, DataType, TableField, TenantTable, FieldOrder,
     TenantTableField, TableFieldLocalization, TableFilter, FilterItem,
-    FilterLocalization, FilterItemLocalization, TenantTableFilter
-)
+    FilterLocalization, FilterItemLocalization, TenantTableFilter,
+    PlantEntityLocalization,
+    TableAsset, 
+    TableAssetLocalization,
+    TableAssetItemLocalization,
+    TableAssetItem,
+    TenantTableAsset
+    )
 
 class TableFieldLocalizationInline(TabularInline):
     model = TableFieldLocalization
@@ -32,6 +38,11 @@ class LanguageAdmin(ModelAdmin):
     list_display = ('code', 'name', 'created_at')
     search_fields = ('code', 'name')
     ordering = ('-created_at',)
+
+@admin.register(PlantEntityLocalization)
+class PlantEntityLocalizationAdmin(ModelAdmin):
+    list_display = ('plant_entity', 'language', 'title', 'created_at')
+    list_filter = ('plant_entity', )
 
 @admin.register(TableType)
 class TableTypeAdmin(ModelAdmin):
@@ -112,3 +123,33 @@ class TenantTableFilterAdmin(ModelAdmin):
     search_fields = ('tenant_table__tenant__tenant_name', 'table_filter__filter_name')
     ordering = ('-created_at',)
     list_filter = ('tenant_table__tenant__tenant_name', 'table_filter__filter_name')
+
+class TableAssetLocalizationInline(TabularInline):
+    model = TableAssetLocalization
+    extra = 1
+
+class TableAssetItemLocalizationInline(TabularInline):
+    model = TableAssetItemLocalization
+    extra = 1
+
+class TableAssetItemInline(TabularInline):
+    model = TableAssetItem
+    extra = 1
+
+@admin.register(TableAsset)
+class TableAssetAdmin(ModelAdmin):
+    list_display = ('key', 'is_active', 'is_external', 'created_at')
+    list_filter = ('is_active', 'is_external')
+    search_fields = ('key',)
+    inlines = [TableAssetLocalizationInline, TableAssetItemInline]
+@admin.register(TableAssetItem)
+class TableAssetItemAdmin(ModelAdmin):
+    list_display = ('key', 'media_type', 'is_active', 'is_external', 'created_at')
+    list_filter = ('is_active', 'is_external', 'media_type')
+    search_fields = ('key', 'name')
+    inlines = [TableAssetItemLocalizationInline]
+@admin.register(TenantTableAsset)
+class TenantTableAssetAdmin(ModelAdmin):
+    list_display = ('tenant_table', 'table_asset', 'is_active', 'field_order', 'created_at')
+    list_filter = ('is_active',)
+    search_fields = ('table_asset__key', 'tenant_table__name')

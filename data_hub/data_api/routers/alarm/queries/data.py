@@ -33,13 +33,16 @@ from tenants.models import (
 from acceptance_control.models import (
     Alarm,
     Severity,
+    FlagTypeLocalization,
     )
 
 
 from metadata.models import (
     TableType,
     TenantTable,
-    TenantTableFilter
+    Language,
+    TenantTableFilter,
+    PlantEntityLocalization,
 )
 
 
@@ -196,17 +199,56 @@ def get_delivery_data(
         # #         lookup_filters &= Q((g_filter, given_filters[g_filter][0]))
         
         rows = []
+        language = Language.objects.get(code='de')
         alarms = Alarm.objects.filter(lookup_filters).order_by('-created_at')
         total_record = len(alarms)
         for alarm in alarms[(page - 1) * items_per_page:page * items_per_page]:
+            flag_type = alarm.flag_type
+            plant_entity = PlantEntity.objects.get(entity_uid=alarm.entity.entity_uid, entity_type__tenant=tenant)
+            if not PlantEntityLocalization.objects.filter(
+                plant_entity=plant_entity,
+                language=language,
+            ).exists():
+                results['error'] = {
+                    'status_code': "non-matching-query",
+                    'status_description': f'localization {language.name} not found for {plant_entity.entity_uid}',
+                    'detail': f'localization {language.name} not found for {plant_entity.entity_uid}',
+                }
+
+                response.status_code = status.HTTP_404_NOT_FOUND
+                return results
+                  
+            if not FlagTypeLocalization.objects.filter(
+                flag_type=flag_type,
+                language=language
+            ).exists():
+                results['error'] = {
+                    'status_code': "non-matching-query",
+                    'status_description': f'localization {language.name} not found for {flag_type.name}',
+                    'detail': f'localization {language.name} not found for {flag_type.name}',
+                }
+
+                response.status_code = status.HTTP_404_NOT_FOUND
+                return results
+
+            plant_entity_localization = PlantEntityLocalization.objects.get(
+                plant_entity=PlantEntity.objects.get(entity_uid=alarm.entity.entity_uid, entity_type__tenant=tenant),
+                language=language,
+            )
+            
+            flag_type_localization = FlagTypeLocalization.objects.get(
+                flag_type=flag_type,
+                language=language,
+            )
+            
             row = {
                 "id": alarm.id,
                 "event_uid": alarm.event_uid,
                 "event_date": alarm.created_at.strftime('%Y-%m-%d'),
                 "start_time": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
                 "end_time": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
-                "location": localizations.get(alarm.entity.entity_uid),
-                "event_name": localizations.get(alarm.flag_type.name),
+                "location": plant_entity_localization.title,
+                "event_name": flag_type_localization.title,
                 "severity_level": alarm.severity.unicode_char,
                 }
                 

@@ -1,6 +1,14 @@
 from django.contrib import admin
-from unfold.admin import ModelAdmin
+from unfold.admin import ModelAdmin, TabularInline, StackedInline
 from tenants.models import Tenant, EntityType, PlantEntity
+from metadata.models import PlantEntityLocalization
+
+
+class PlantEntityLocalizationInline(TabularInline):  # or StackedInline
+    model = PlantEntityLocalization
+    extra = 1
+    # fields = ('language', 'title', 'description', 'created_at')
+    # readonly_fields = ('created_at',)
 
 # Register your models here.
 @admin.register(Tenant)
@@ -30,3 +38,5 @@ class PlantEntityAdmin(ModelAdmin):
     list_filter = ('entity_type', 'created_At')  # Add filters for entity type and creation date
     ordering = ('-created_At',)  # Order by creation date, newest first
     readonly_fields = ('created_At',)  # Make created_At field read-only
+        
+    inlines = [PlantEntityLocalizationInline]

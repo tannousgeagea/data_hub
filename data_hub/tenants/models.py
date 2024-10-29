@@ -67,4 +67,4 @@ class PlantEntity(models.Model):
         verbose_name_plural = "Plant Entities"
 
     def __str__(self):
-        return f'{self.entity_type}, {self.entity_uid}'
+        return f'Entity {self.entity_uid} in {self.entity_type.tenant.tenant_name}'

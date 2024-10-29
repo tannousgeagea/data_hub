@@ -4,6 +4,7 @@ from tenants.models import (
     PlantEntity
 )
 
+from metadata.models import Language
 
 class Media(models.Model):
     IMAGE = 'image'
@@ -70,6 +71,29 @@ class FlagType(models.Model):
     
     def __str__(self):
         return self.name
+
+class FlagTypeLocalization(models.Model):
+    flag_type = models.ForeignKey(
+        FlagType,
+        on_delete=models.RESTRICT,
+        related_name='flag_type_localization'
+    )
+    
+    language = models.ForeignKey(Language, on_delete=models.RESTRICT)
+    title = models.CharField(max_length=255, help_text="Localized title of the flag type.")
+    description = models.TextField(blank=True, null=True, help_text="Localized description of the falg type.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'flag_type_localization'
+        verbose_name_plural = 'Flag Type Localizations'
+        unique_together = ('flag_type', 'language')
+        indexes = [
+            models.Index(fields=['flag_type', 'language']),
+        ]
+
+    def __str__(self):
+        return f"Localization for '{self.flag_type.name}' in {self.language}"
 
 # Severity levels for each flag
 class Severity(models.Model):

@@ -229,6 +229,13 @@ UNFOLD = {
                         ),
                     },
                     {
+                        "title": _("Plant Entity Localization"),
+                        "icon": "language_international",
+                        "link": reverse_lazy(
+                            "admin:metadata_plantentitylocalization_changelist"
+                        ),
+                    },
+                    {
                         "title": _("Table Types"),
                         "icon": "data_table",
                         "link": reverse_lazy(
@@ -312,6 +319,27 @@ UNFOLD = {
                             "admin:metadata_tenanttablefilter_changelist"
                         ),
                     },
+                    {
+                        "title": _("Table Assets"),
+                        "icon": "web_asset",
+                        "link": reverse_lazy(
+                            "admin:metadata_tableasset_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Table Asset Items"),
+                        "icon": "category",
+                        "link": reverse_lazy(
+                            "admin:metadata_tableassetitem_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Tenant Table Assets"),
+                        "icon": "device_hub",
+                        "link": reverse_lazy(
+                            "admin:metadata_tenanttableasset_changelist"
+                        ),
+                    },
                 ],
             },
             {
@@ -323,6 +351,13 @@ UNFOLD = {
                         "icon": "flag",
                         "link": reverse_lazy(
                             "admin:acceptance_control_flagtype_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Flag Types Localization"),
+                        "icon": "language_international",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_flagtypelocalization_changelist"
                         ),
                     },
                     {

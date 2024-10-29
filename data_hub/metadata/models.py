@@ -1,6 +1,6 @@
 import string
 from django.db import models
-from tenants.models import Tenant
+from tenants.models import Tenant, EntityType, PlantEntity
 from django.core.exceptions import ValidationError
 
 def clean_field(value):
@@ -35,6 +35,29 @@ class Language(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.code})"
+    
+class PlantEntityLocalization(models.Model):
+    plant_entity = models.ForeignKey(
+        PlantEntity,
+        on_delete=models.RESTRICT,
+        related_name='plant_entity_localization'
+    )
+    
+    language = models.ForeignKey(Language, on_delete=models.RESTRICT)
+    title = models.CharField(max_length=255, help_text="Localized title of the plant entity.")
+    description = models.TextField(blank=True, null=True, help_text="Localized description of the plant entity.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'plant_entity_localization'
+        verbose_name_plural = 'Plant Entity Localizations'
+        unique_together = ('plant_entity', 'language')
+        indexes = [
+            models.Index(fields=['plant_entity', 'language']),
+        ]
+
+    def __str__(self):
+        return f"Localization for '{self.plant_entity.entity_uid}' in {self.language}"
     
 class TableType(models.Model):
     name = models.CharField(max_length=255)
@@ -144,7 +167,11 @@ class TableFieldLocalization(models.Model):
 
     def __str__(self):
         return f"Localization for '{self.field.name}' in {self.language}"
-    
+
+#############################################################################################################
+################################## Table Filter #############################################################
+#############################################################################################################
+
 class TableFilter(models.Model):
     """
     Represents filters used to filter the metadata events.
@@ -283,3 +310,84 @@ class TenantTableFilter(models.Model):
         
     def __str__(self):
         return f"{self.tenant_table}: {self.table_filter.filter_name}"
+    
+    
+#############################################################################################################
+################################## Table Assets #############################################################
+#############################################################################################################
+
+class TableAsset(models.Model):
+    key = models.CharField(max_length=50, help_text="Key for the asset category (e.g., 'stats').")
+    is_active = models.BooleanField(default=True, help_text="Indicates if the asset is currently active.")
+    is_external = models.BooleanField(default=False, help_text="Indicated whether the asstes items are given from external url")
+    url = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'table_asset'
+        verbose_name_plural = "Table Assets"
+
+    def __str__(self):
+        return f"{self.key} Asset"
+
+class TableAssetLocalization(models.Model):
+    asset = models.ForeignKey(TableAsset, on_delete=models.CASCADE, related_name='localizations')
+    language = models.ForeignKey(Language, on_delete=models.RESTRICT)
+    title = models.CharField(max_length=255, help_text="Localized title of the asset.")
+    description = models.TextField(blank=True, null=True, help_text="Localized description of the asset.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'table_asset_localization'
+        unique_together = ('asset', 'language')
+        verbose_name_plural = "Table Asset Localizations"
+
+    def __str__(self):
+        return f"{self.title} ({self.language.code})"
+
+class TableAssetItem(models.Model):
+    asset = models.ForeignKey(TableAsset, on_delete=models.RESTRICT,)
+    key = models.CharField(max_length=50, help_text="Key for the asset item (e.g., 'snapshots').")
+    media_type = models.CharField(max_length=10, choices=[('image', 'Image'), ('video', 'Video')])
+    is_active = models.BooleanField(default=True, help_text="Indicates if the asset is currently active.")
+    is_external = models.BooleanField(default=False, help_text="Indicated whether the asstes items are given from external url")
+    url = models.CharField(max_length=255, null=True, blank=True)
+    name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'table_asset_item'
+        verbose_name_plural = "Table Asset Items"
+
+    def __str__(self):
+        return f"{self.key} ({self.media_type})"
+
+class TableAssetItemLocalization(models.Model):
+    asset_item = models.ForeignKey(TableAssetItem, on_delete=models.CASCADE,)
+    language = models.ForeignKey(Language, on_delete=models.RESTRICT)
+    title = models.CharField(max_length=255, help_text="Localized title of the asset item.")
+    description = models.TextField(blank=True, null=True, help_text="Localized description of the asset item.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'table_asset_item_localization'
+        unique_together = ('asset_item', 'language')
+        verbose_name_plural = "Table Asset Item Localizations"
+
+    def __str__(self):
+        return f"{self.title} ({self.language.code})"
+    
+class TenantTableAsset(models.Model):
+    table_asset = models.ForeignKey(TableAsset, on_delete=models.RESTRICT,)
+    tenant_table = models.ForeignKey(TenantTable, on_delete=models.RESTRICT, )
+    is_active = models.BooleanField(default=True, help_text="Indicates if the asset item is currently active.")
+    field_order = models.ForeignKey(FieldOrder, on_delete=models.RESTRICT,)
+    created_at = models.DateTimeField(auto_now_add=True)
+    description = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        db_table = 'tenant_table_asset'
+        verbose_name_plural = "Tenant Table Asset"
+        
+    def __str__(self):
+        return f"{self.tenant_table}: {self.table_asset.key}"
