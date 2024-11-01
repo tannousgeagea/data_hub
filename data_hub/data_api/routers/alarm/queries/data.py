@@ -1,4 +1,5 @@
 import os
+import json
 import time
 import math
 import django
@@ -12,14 +13,14 @@ from typing import Callable
 from fastapi import Request
 from fastapi import Response
 from fastapi import APIRouter
-from fastapi import HTTPException
+from fastapi import HTTPException, Query, Body, Form
 from fastapi.routing import APIRoute
-from pydantic import BaseModel
+from typing import Dict, List, Optional
+from pydantic import BaseModel, Field, create_model, ValidationError
 from common_utils.timezone_utils.timeloc import (
     get_location_and_timezone,
     convert_to_local_time,
 )
-
 
 timezone_str = get_location_and_timezone()
 
@@ -33,9 +34,9 @@ from tenants.models import (
 from acceptance_control.models import (
     Alarm,
     Severity,
+    FlagType,
     FlagTypeLocalization,
     )
-
 
 from metadata.models import (
     TableType,
@@ -45,24 +46,19 @@ from metadata.models import (
     PlantEntityLocalization,
 )
 
-
-
-filter_mapping = {
-    "severity_level": {
-        "severity": Severity
-        },
-    "location": {
-        "entity": PlantEntity
-        },
-}
-
-
-localizations = {
-    'impurity': "Störtoff",
-    'hotspot': 'Hotspot',
-    'gate03': 'Tor 3',
-    'gate04': 'Tor 4',
-}
+def filter_mapping(key, value):
+    try:
+        if value is None:
+            return None
+        
+        if key == "severity_level":
+            return ("severity", Severity.objects.filter(level=value).first())
+        if key == "location":
+            return ("entity", PlantEntity.objects.get(entity_uid=value))
+        if key == "flag_type":
+            return ("flag_type", FlagType.objects.get(name=value))
+    except Exception as err:
+        raise ValueError(f"Failed to map filter value {value} filter {key}: {err}")
 
 class TimedRoute(APIRoute):
     def get_route_handler(self) -> Callable:
@@ -84,6 +80,13 @@ router = APIRouter(
     route_class=TimedRoute,
 )
 
+def create_filter_model(fields: Dict[str, Optional[str]]):
+    """
+    This function creates a dynamic Pydantic model based on the fields provided,
+    without setting default values.
+    """
+    return create_model("DynamicFilterModel", **{k: (Optional[str], None) for k in fields})
+
 description = """
     URL Path: /alarm
 
@@ -94,17 +97,38 @@ description = """
 @router.api_route(
     "/alarm", methods=["GET"], tags=["Alarm"], description=description,
 )
-def get_delivery_data(
+def get_alarm_data(
     response: Response, 
     tenant_domain:str,
-    filters:str='',
+    user_filters: Optional[str] = Query(None),
     from_date:datetime=None,
     to_date:datetime=None,
     items_per_page:int=15,
     page:int=1,
+    language:str='de',
     ):
     results = {}
     try:
+        
+        if not Language.objects.filter(code=language).exists():
+            results = {
+                "error": {
+                    "status_code": "not found",
+                    "status_description": f"Given Language {language} not supported",
+                    "detail": f"Given Language {language} not supported! Supported Language: {[lang.name for lang in Language.objects.all()]}",
+                }
+            }
+            
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return results
+        
+        filters_dict = {}
+        if user_filters:
+            try:
+                filters_dict = json.loads(user_filters)
+            except json.JSONDecodeError:
+                raise HTTPException(status_code=400, detail="Invalid JSON format for user_filters")
+
         if not Tenant.objects.filter(domain=tenant_domain).exists():
             results = {
                 "error": {
@@ -129,30 +153,7 @@ def get_delivery_data(
             response.status_code = status.HTTP_404_NOT_FOUND
             return results
         
-        today = datetime.today()
-        if from_date is None:
-            from_date = datetime(today.year, today.month, today.day)
-        
-        if to_date is None:
-            to_date = from_date + timedelta(days=1)
-            
-        from_date = from_date.replace(tzinfo=timezone.utc)
-        to_date = to_date.replace(tzinfo=timezone.utc) + timedelta(days=1)
-        
-        
-        if page < 1:
-            page = 1
-        
-        if items_per_page<=0:
-            results['error'] = {
-                'status_code': 400,
-                'status_description': f'Bad Request, items_per_pages should not be 0',
-                'detail': "division by zero."
-            }
-
-            response.status_code = status.HTTP_400_BAD_REQUEST    
-            return results
-        
+        language = Language.objects.get(code=language)
         table_type = TableType.objects.get(name='alarm')
         tenant = Tenant.objects.get(domain=tenant_domain)
         
@@ -169,42 +170,70 @@ def get_delivery_data(
             response.status_code = status.HTTP_404_NOT_FOUND
             return results
         
+        today = datetime.today()
+        if from_date is None:
+            from_date = datetime(today.year, today.month, today.day)
+        
+        if to_date is None:
+            to_date = from_date + timedelta(days=1)
+            
+        from_date = from_date.replace(tzinfo=timezone.utc)
+        to_date = to_date.replace(tzinfo=timezone.utc)
+        
+        if page < 1:
+            page = 1
+        
+        if items_per_page<=0:
+            results['error'] = {
+                'status_code': 400,
+                'status_description': f'Bad Request, items_per_pages should not be 0',
+                'detail': "division by zero."
+            }
+
+            response.status_code = status.HTTP_400_BAD_REQUEST    
+            return results
+        
         tenant_table = TenantTable.objects.get(
             tenant=tenant,
             table_type=table_type
         )
         
-        Filters = TenantTableFilter.objects.filter(
+        tenant_table_filter = TenantTableFilter.objects.filter(
             tenant_table=tenant_table,
             is_active=True
         )
         
-        Filters = [
-            f.table_filter.filter_name for f  in Filters
-        ]
+        filter_fields = {
+            fil.table_filter.filter_name: '' for fil in tenant_table_filter
+        }
         
+        
+        DynamicFilterModel = create_filter_model(filter_fields)
+        try:
+            validated_filters = DynamicFilterModel(**filters_dict)
+        except ValidationError as e:
+            results['error'] = {
+                "status_code": 422,
+                "detail": f"{e.errors()}"
+            }
+            
+            response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+            return results
+
         lookup_filters = Q()
         lookup_filters &= Q(tenant=tenant)
         lookup_filters &= Q(created_at__range=(from_date, to_date ))
-        # given_filters = {s.split('=')[0]: s.split('=')[1].split(',') for s in filters.split('&') if len(s)}
-        
-        # # for g_filter in given_filters.keys():
-        # #     key = g_filter.split('__')[0]
-        # #     if not key in filters:
-        # #         continue
-            
-        # #     if len(given_filters[g_filter])>1:
-        # #         lookup_filters &= Q((g_filter, given_filters[g_filter]))
-        # #     else:
-        # #         lookup_filters &= Q((g_filter, given_filters[g_filter][0]))
+        for key, value in validated_filters:
+            filter_map = filter_mapping(key, value)
+            if filter_map:
+                lookup_filters &= Q(filter_map) 
         
         rows = []
-        language = Language.objects.get(code='de')
         alarms = Alarm.objects.filter(lookup_filters).order_by('-created_at')
-        total_record = len(alarms)
         for alarm in alarms[(page - 1) * items_per_page:page * items_per_page]:
             flag_type = alarm.flag_type
             plant_entity = PlantEntity.objects.get(entity_uid=alarm.entity.entity_uid, entity_type__tenant=tenant)
+            
             if not PlantEntityLocalization.objects.filter(
                 plant_entity=plant_entity,
                 language=language,
@@ -256,10 +285,13 @@ def get_delivery_data(
                 row
             )
         
+        total_record = len(alarms)
         results['data'] = {
+            "language": language.name,
+            "tenant": tenant.tenant_name,
             "type": "collection",
             "total_record": total_record,
-            "filters": lookup_filters,
+            "user_filters": lookup_filters.children,
             "pages": math.ceil(total_record / items_per_page),
             "items": rows,
         }
@@ -267,7 +299,6 @@ def get_delivery_data(
         results["detail"] = "data retrieved successfully"
         results["status_description"] = "OK"
     
-        
     except ObjectDoesNotExist as e:
         results['error'] = {
             'status_code': "non-matching-query",
@@ -279,12 +310,12 @@ def get_delivery_data(
         
     except HTTPException as e:
         results['error'] = {
-            "status_code": "not found",
-            "status_description": "Request not Found",
-            "detail": f"{e}",
+            "status_code": f"{e.status_code}",
+            "status_description": f"{e.detail}",
+            "detail": f"{e.detail}",
         }
         
-        response.status_code = status.HTTP_404_NOT_FOUND
+        response.status_code = e.status_code
     
     except Exception as e:
         results['error'] = {

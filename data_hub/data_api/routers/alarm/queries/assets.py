@@ -15,7 +15,7 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from fastapi import status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, create_model, ValidationError
 from typing import Dict, List, Optional
 from acceptance_control.models import (
     Alarm,
@@ -30,6 +30,7 @@ from metadata.models import (
     TableAssetItem,
     TableAssetLocalization,
     TableAssetItemLocalization,
+    TenantTableFilter,
 )
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -55,6 +56,20 @@ router = APIRouter(
     route_class=TimedRoute,
 )
 
+# def create_filter_model(fields: Dict[str, Optional[str]]):
+#     """
+#     This function creates a dynamic Pydantic model based on the fields provided.
+#     """
+#     return create_model("AlarmAssetFilter", **{k: (Optional[str], Field(default=v)) for k, v in fields.items()})
+
+
+def create_filter_model(fields: Dict[str, Optional[str]]):
+    """
+    This function creates a dynamic Pydantic model based on the fields provided,
+    without setting default values.
+    """
+    # Each field is optional but without a default value
+    return create_model("DynamicFilterModel", **{k: (Optional[str], ...) for k in fields})
 
 description = """
 
@@ -113,7 +128,7 @@ This API is used to fetch comprehensive information and analytics related to a s
 @router.api_route(
     "/alarm/assets/{event_uid}", methods=["GET"], tags=["Alarm"], description=description,
 )
-def get_delivery_assets(response: Response, event_uid:str):
+def get_alarm_assets(response: Response, event_uid:str):
     results = {}
     try:
         language = Language.objects.get(code='de')
@@ -195,6 +210,8 @@ def get_delivery_assets(response: Response, event_uid:str):
             "categories": categories,
             "data": data,
         }
+        
+        
         connection.close()
         return results    
     

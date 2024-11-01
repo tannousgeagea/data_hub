@@ -1,4 +1,5 @@
 import os
+import json
 import time
 import math
 import django
@@ -8,18 +9,60 @@ from fastapi import status
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from typing import Optional, Dict
 from typing import Callable
 from fastapi import Request
 from fastapi import Response
 from fastapi import APIRouter
+from fastapi import Query
 from fastapi import HTTPException
 from fastapi.routing import APIRoute
-from pydantic import BaseModel
+from pydantic import BaseModel, create_model, ValidationError
+from common_utils.timezone_utils.timeloc import (
+    get_location_and_timezone,
+    convert_to_local_time,
+)
+
+timezone_str = get_location_and_timezone()
 
 django.setup()
 from django.core.exceptions import ObjectDoesNotExist
-from tenants.models import Tenant
-from acceptance_control.models import Delivery, DeliveryFlag, TenantFlagDeployment
+from tenants.models import (
+    Tenant,
+    PlantEntity,
+)
+
+from acceptance_control.models import (
+    Delivery, 
+    DeliveryFlag, 
+    TenantFlagDeployment,
+    Severity,
+    FlagType,
+    FlagTypeLocalization,
+    )
+
+from metadata.models import (
+    TableType,
+    TenantTable,
+    Language,
+    TenantTableFilter,
+    PlantEntityLocalization,
+)
+
+
+def filter_mapping(key, value):
+    try:
+        if value is None:
+            return None
+        
+        if key == "severity_level":
+            return ("severity", Severity.objects.filter(level=value).first())
+        if key == "location":
+            return ("entity", PlantEntity.objects.get(entity_uid=value))
+        if key == "flag_type":
+            return ("flag_type", FlagType.objects.get(name=value))
+    except Exception as err:
+        raise ValueError(f"Failed to map filter value {value} filter {key}: {err}")
 
 class TimedRoute(APIRoute):
     def get_route_handler(self) -> Callable:
@@ -41,6 +84,13 @@ router = APIRouter(
     route_class=TimedRoute,
 )
 
+def create_filter_model(fields: Dict[str, Optional[str]]):
+    """
+    This function creates a dynamic Pydantic model based on the fields provided,
+    without setting default values.
+    """
+    return create_model("DynamicFilterModel", **{k: (Optional[str], None) for k in fields})
+
 description = """
     URL Path: /delivery
 
@@ -54,14 +104,34 @@ description = """
 def get_delivery_data(
     response: Response, 
     tenant_domain:str,
-    location:str='all',
+    user_filters: Optional[str] = Query(None),
     from_date:datetime=None,
     to_date:datetime=None,
     items_per_page:int=15,
     page:int=1,
+    language:str='de',
     ):
     results = {}
     try:
+        if not Language.objects.filter(code=language).exists():
+            results = {
+                "error": {
+                    "status_code": "not found",
+                    "status_description": f"Given Language {language} not supported",
+                    "detail": f"Given Language {language} not supported! Supported Language: {[lang.name for lang in Language.objects.all()]}",
+                }
+            }
+            
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return results
+        
+        filters_dict = {}
+        if user_filters:
+            try:
+                filters_dict = json.loads(user_filters)
+            except json.JSONDecodeError:
+                raise HTTPException(status_code=400, detail="Invalid JSON format for user_filters")
+
         if not Tenant.objects.filter(domain=tenant_domain).exists():
             results = {
                 "error": {
@@ -73,6 +143,34 @@ def get_delivery_data(
             
             response.status_code = status.HTTP_404_NOT_FOUND
             return results
+        
+        if not Tenant.objects.filter(domain=tenant_domain).exists():
+            results = {
+                "error": {
+                    "status_code": "not found",
+                    "status_description": f"Tenant {tenant_domain} not found",
+                    "detail": f"Tenant {Tenant} not found ! Existing options: {[tenant.domain for tenant in Tenant.objects.all()]}",
+                }
+            }
+            
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return results
+        
+        if not TableType.objects.filter(name='delivery').exists():
+            results = {
+                "error": {
+                    "status_code": "not found",
+                    "status_description": f"Table Type alarm not found",
+                    "detail": f"Table Type alarm not found ! Existing options: {[table_type.name for table_type in TableType.objects.all()]}",
+                }
+            }
+            
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return results
+        
+        language = Language.objects.get(code=language)
+        table_type = TableType.objects.get(name='delivery')
+        tenant = Tenant.objects.get(domain=tenant_domain)
         
         today = datetime.today()
         if from_date is None:
@@ -98,24 +196,53 @@ def get_delivery_data(
             response.status_code = status.HTTP_400_BAD_REQUEST    
             return results
         
-        tenant = Tenant.objects.get(domain=tenant_domain)
+        tenant_table = TenantTable.objects.get(
+            tenant=tenant,
+            table_type=table_type
+        )
+        
+        tenant_table_filter = TenantTableFilter.objects.filter(
+            tenant_table=tenant_table,
+            is_active=True
+        )
+        
+        filter_fields = {
+            fil.table_filter.filter_name: '' for fil in tenant_table_filter
+        }
+        
+        
+        DynamicFilterModel = create_filter_model(filter_fields)
+        try:
+            validated_filters = DynamicFilterModel(**filters_dict)
+        except ValidationError as e:
+            results['error'] = {
+                "status_code": 422,
+                "detail": f"{e.errors()}"
+            }
+            
+            response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+            return results
+        
         lookup_filters = Q()
         lookup_filters &= Q(tenant=tenant)
         lookup_filters &= Q(created_at__range=(from_date, to_date ))
-        if not location=='all':
-            lookup_filters &= Q(delivery_location=location)
+        for key, value in validated_filters:
+            filter_map = filter_mapping(key, value)
+            if filter_map:
+                lookup_filters &= Q(filter_map) 
         
+        language = Language.objects.get(code='de')
         deliveries = Delivery.objects.filter(lookup_filters).order_by('-created_at')
         rows = []
         total_record = len(deliveries)
         for delivery in deliveries[(page - 1) * items_per_page:page * items_per_page]:
             row = {
                 "id": delivery.id,
-                "delivery_id": str(delivery.id).zfill(6),
-                "delivery_date": delivery.created_at.strftime('%Y-%m-%d'),
-                "start_time": delivery.delivery_start.strftime("%H:%M:%S"),
-                "end_time": delivery.delivery_end.strftime("%H:%M:%S"),
-                "location": delivery.delivery_location,
+                "delivery_id": delivery.delivery_id,
+                "delivery_date": convert_to_local_time(utc_time=delivery.created_at, timezone_str=timezone_str).strftime('%Y-%m-%d'),
+                "start_time": convert_to_local_time(utc_time=delivery.delivery_start, timezone_str=timezone_str).strftime("%H:%M:%S"),
+                "end_time": convert_to_local_time(utc_time=delivery.delivery_end, timezone_str=timezone_str).strftime("%H:%M:%S"),
+                "location": PlantEntityLocalization.objects.get(plant_entity=delivery.entity, language=language).title if PlantEntityLocalization.objects.filter(plant_entity=delivery.entity, language=language).exists() else delivery.delivery_location,
                 }
 
 

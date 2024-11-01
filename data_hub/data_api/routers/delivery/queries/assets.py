@@ -24,7 +24,19 @@ from acceptance_control.models import (
     DeliveryMedia,
     )
 
+from metadata.models import (
+    TableType,
+    Language,
+    TenantTable,
+    TenantTableAsset,
+    TableAssetItem,
+    TableAssetLocalization,
+    TableAssetItemLocalization,
+    TenantTableFilter,
+)
+
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+AzAccoutKey = os.getenv('AzAccoutKey')
 
 class TimedRoute(APIRoute):
     def get_route_handler(self) -> Callable:
@@ -107,6 +119,7 @@ This API is used to fetch comprehensive information and analytics related to a s
 def get_delivery_assets(response: Response, delivery_id:str):
     results = {}
     try:
+        language = Language.objects.get(code='de')
         if delivery_id == 'null':
             results['error'] = {
                 'status_code': "bad-request",
@@ -115,15 +128,6 @@ def get_delivery_assets(response: Response, delivery_id:str):
             }
             response.status_code = status.HTTP_400_BAD_REQUEST
             return results
-        
-        # if not delivery_id.isdigit():
-        #     results['error'] = {
-        #         'status_code': "bad-request",
-        #         'status_description': f"delivery_id is expected a number but got {delivery_id}",
-        #         'detail': 'delivery_id is null, please provide a valid delivery_id'
-        #     }
-        #     response.status_code = status.HTTP_400_BAD_REQUEST
-        #     return results
     
         if not Delivery.objects.filter(delivery_id=delivery_id).exists():
             results['error'] = {
@@ -137,76 +141,69 @@ def get_delivery_assets(response: Response, delivery_id:str):
         delivery = Delivery.objects.get(delivery_id=delivery_id)
         delivery_media = DeliveryMedia.objects.filter(delivery=delivery)
         
-        for media in delivery_media:
-            media.media.media_url
+        table_assets = TenantTableAsset.objects.filter(
+            tenant_table=TenantTable.objects.get(
+                tenant=delivery.tenant,
+                table_type=TableType.objects.get(name='delivery'),
+            ),
+            is_active=True,
+        )
         
-        results['categories'] = [
-            {
-                'key': 'preview',
-                'name': "Nachshau",
-            },
-            {
-                'key': 'analytics',
-                'name': "Auffälligkeiten",
-            },
-        ]
+        placeholder = {
+            'url': f"https://wacoreblob.blob.core.windows.net/amk/placeholder.png?{AzAccoutKey}",
+            'name': "Bild in Vorbereitung",
+            'time': (datetime.now() + timedelta(hours=2)).strftime(DATETIME_FORMAT),
+            }
         
-        results['data'] = [
-            {
-                'title': "Nachschau",
-                "key":"preview",
-                'items': [
+        categories = []
+        data = []
+        
+        for table_asset in table_assets:
+            categories.append(
+                {
+                    'key': table_asset.table_asset.key,
+                    'name': TableAssetLocalization.objects.get(asset=table_asset.table_asset, language=language).title if TableAssetLocalization.objects.filter(asset=table_asset.table_asset, language=language) else table_asset.table_asset.key,
+                }
+            )
+            
+            items = []
+            table_asset_items = TableAssetItem.objects.filter(asset=table_asset.table_asset, is_active=True)
+            for item in table_asset_items:
+                items.append(
                     {
-                        'title': 'Aktivität',
-                        "key":"snapshots",
-                        'type': 'image',
+                        'key': item.key,
+                        'title': TableAssetItemLocalization.objects.get(asset_item=item, language=language).title if TableAssetItemLocalization.objects.filter(asset_item=item, language=language) else item.name,
+                        'type': item.media_type,
                         'data': [
                             {
-                                'url': media.media.media_url,
+                                'url': f"{media.media.media_url}?{AzAccoutKey}",
                                 'name': media.media.media_name,
                                 'time': media.media.created_at.strftime(DATETIME_FORMAT),
-                            } for media in delivery_media if media.media.media_type == "image"
-                        ]
+                            } for media in delivery_media if media.media.media_type == item.media_type
+                        ] if len(delivery_media) else [placeholder]
                     },
-                    {
-                        'title': 'Zeitrafferaufnahme',
-                        "key":"videos",
-                        'type': 'video',
-                        'data': [
-                            {
-                                'url': media.media.media_url,
-                                'name': media.media.media_name,
-                                'time': media.media.created_at.strftime(DATETIME_FORMAT),
-                            } for media in delivery_media if media.media.media_type == "video"
-                        ]
-                    }
-                ]
-            },
-            {
-                "title": "Auffälligkeiten",
-                "key": 'analytics',
-                "items": [
-                    {
-                        "title": "Prob. Langteile Aufnahme",
-                        "key": "impurity_snapshots",
-                        "type": "image",
-                        "data": [
-                            {
-                                'url': media.media.media_url,
-                                'name': media.media.media_name,
-                                'time': media.media.created_at.strftime(DATETIME_FORMAT),
-                            } for media in delivery_media if media.media.media_type == "image"
-                        ]
-                    },
-                ]
-            },
-        ]
+                )
+            
+            data.append(
+                {
+                    "key": table_asset.table_asset.key,
+                    "title":  TableAssetLocalization.objects.get(asset=table_asset.table_asset, language=language).title if TableAssetLocalization.objects.filter(asset=table_asset.table_asset, language=language) else table_asset.table_asset.key,
+                    "items": items,
+                }
+            )
+        
+        
+        results = {
+            "categories": categories,
+            "data": data,
+        }
 
         return results    
     
     except HTTPException as e:
         results['error'] = {
             "status_code": 404,
+            "detail": f"{e}",
         }
         
         response.status_code = status.HTTP_404_NOT_FOUND
