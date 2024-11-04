@@ -12,8 +12,6 @@ from tenants.models import Tenant, PlantEntity
 def execute(self, payload, **kwargs):
     data: dict = {}
     try:
-        
-        print(payload)
         if not Tenant.objects.filter(domain=payload.tenant_domain).exists():
             raise ObjectDoesNotExist(
                 f"tenant {payload.tenant_domain} does not exist"
@@ -27,20 +25,21 @@ def execute(self, payload, **kwargs):
             
             
         if Delivery.objects.filter(delivery_id=payload.delivery_id).exists():
-            raise IntegrityError(
-                f"delivery_id {payload.delivery_id} already exists"
+            delivery = Delivery.objects.get(
+                delivery_id=payload.delivery_id
             )
+            delivery.delivery_end = payload.delivery_end.replace(tzinfo=timezone.utc)
             
-        entity = PlantEntity.objects.get(entity_uid=payload.location, entity_type__tenant=tenant)
-        
-        delivery = Delivery(
-            tenant=tenant,
-            entity=entity,
-            delivery_id=payload.delivery_id,
-            delivery_location=payload.location,
-            delivery_start=payload.delivery_start.replace(tzinfo=timezone.utc),
-            delivery_end=payload.delivery_end.replace(tzinfo=timezone.utc),
-        )
+        else:
+            entity = PlantEntity.objects.get(entity_uid=payload.location, entity_type__tenant=tenant)
+            delivery = Delivery(
+                tenant=tenant,
+                entity=entity,
+                delivery_id=payload.delivery_id,
+                delivery_location=payload.location,
+                delivery_start=payload.delivery_start.replace(tzinfo=timezone.utc),
+                delivery_end=payload.delivery_end.replace(tzinfo=timezone.utc),
+            )
         
         delivery.save()
         data.update(
