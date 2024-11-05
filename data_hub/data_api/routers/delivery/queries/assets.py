@@ -22,6 +22,7 @@ from acceptance_control.models import (
     Media, 
     DeliveryFlag, 
     DeliveryMedia,
+    AlarmMedia,
     )
 
 from metadata.models import (
@@ -35,6 +36,24 @@ from metadata.models import (
     TenantTableFilter,
 )
 
+def map_item_assets(delivery_id, item):
+    try:
+        if "delivery" in item.key:
+            return DeliveryMedia.objects.filter(
+                delivery__delivery_id=delivery_id, 
+                media__media_type=item.media_type
+                )
+        if "impurity" in item.key:
+            return AlarmMedia.objects.filter(
+                alarm__delivery_id=delivery_id, 
+                alarm__flag_type__name="impurity", 
+                media__media_type=item.media_type
+                )
+        else:
+            return []
+    except Exception as err:
+        raise ValueError(f"Error mapping items to assets: {err}")
+    
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 AzAccoutKey = os.getenv('AzAccoutKey')
 
@@ -169,6 +188,7 @@ def get_delivery_assets(response: Response, delivery_id:str):
             items = []
             table_asset_items = TableAssetItem.objects.filter(asset=table_asset.table_asset, is_active=True)
             for item in table_asset_items:
+                medias = map_item_assets(delivery_id=delivery_id, item=item)
                 items.append(
                     {
                         'key': item.key,
@@ -179,8 +199,8 @@ def get_delivery_assets(response: Response, delivery_id:str):
                                 'url': f"{media.media.media_url}?{AzAccoutKey}",
                                 'name': media.media.media_name,
                                 'time': media.media.created_at.strftime(DATETIME_FORMAT),
-                            } for media in delivery_media if media.media.media_type == item.media_type
-                        ] if len(delivery_media) else [placeholder]
+                            } for media in medias if media.media.media_type == item.media_type
+                        ] if len(medias) else [placeholder]
                     },
                 )
             

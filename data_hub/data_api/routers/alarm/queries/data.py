@@ -9,6 +9,7 @@ from fastapi import status
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from datetime import time as dtime
 from typing import Callable
 from fastapi import Request
 from fastapi import Response
@@ -175,10 +176,10 @@ def get_alarm_data(
             from_date = datetime(today.year, today.month, today.day)
         
         if to_date is None:
-            to_date = from_date + timedelta(days=1)
+            to_date = from_date
             
         from_date = from_date.replace(tzinfo=timezone.utc)
-        to_date = to_date.replace(tzinfo=timezone.utc)
+        to_date = datetime.combine(to_date + dtime.max).replace(tzinfo=timezone.utc)
         
         if page < 1:
             page = 1

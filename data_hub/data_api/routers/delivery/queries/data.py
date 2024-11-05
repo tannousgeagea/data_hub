@@ -4,11 +4,13 @@ import time
 import math
 import django
 from django.db import connection
+from django.db.models import Max, F
 from django.db.models import Q
 from fastapi import status
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from datetime import time as dtime
 from typing import Optional, Dict
 from typing import Callable
 from fastapi import Request
@@ -177,10 +179,10 @@ def get_delivery_data(
             from_date = datetime(today.year, today.month, today.day)
         
         if to_date is None:
-            to_date = from_date + timedelta(days=1)
+            to_date = from_date
             
         from_date = from_date.replace(tzinfo=timezone.utc)
-        to_date = to_date.replace(tzinfo=timezone.utc) + timedelta(days=1)
+        to_date = datetime.combine(to_date, dtime.max).replace(tzinfo=timezone.utc)
         
         
         if page < 1:
@@ -248,8 +250,16 @@ def get_delivery_data(
 
             flags_deployment = TenantFlagDeployment.objects.filter(tenant=tenant)
             for flag in flags_deployment:
-                flags = DeliveryFlag.objects.filter(delivery=delivery, flag_type=flag.flag_type)
-                if not flags:
+                flags = DeliveryFlag.objects.filter(
+                    delivery=delivery,
+                    flag_type=flag.flag_type
+                ).annotate(
+                    max_severity=Max('severity__level')
+                ).filter(
+                    severity__level=F('max_severity')
+                )
+                
+                if not flags.exists():
                     row.update(
                         {
                             flag.flag_type.name: '⬜',
@@ -258,12 +268,12 @@ def get_delivery_data(
                     
                     continue
                 
-                for flag in flags:
-                    row.update(
-                        {
-                            flag.flag_type.name: flag.severity.unicode_char
-                        }
-                    )
+                flag = flags.first()
+                row.update(
+                    {
+                        flag.flag_type.name: flag.severity.unicode_char
+                    }
+                )
                 
             rows.append(
                 row
