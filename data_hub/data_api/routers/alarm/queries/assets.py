@@ -163,7 +163,7 @@ def get_alarm_assets(response: Response, event_uid:str):
         )
         
         placeholder = {
-            'url': f"https://wacoreblob.blob.core.windows.net/amk/placeholder.png?{AzAccoutKey}",
+            'url': f"https://wacoreblob.blob.core.windows.net/amk/placeholder.jpg?{AzAccoutKey}",
             'name': "Bild in Vorbereitung",
             'time': (datetime.now() + timedelta(hours=2)).strftime(DATETIME_FORMAT),
             }
