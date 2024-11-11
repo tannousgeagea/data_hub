@@ -39,7 +39,7 @@ class EntityType(models.Model):
         verbose_name_plural = "Entity Types"
 
     def __str__(self):
-        return self.entity_type
+        return f"{self.tenant} - {self.entity_type}"
     
 class PlantEntity(models.Model):
 

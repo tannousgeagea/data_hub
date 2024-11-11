@@ -52,7 +52,7 @@ from metadata.models import (
 )
 
 
-def filter_mapping(key, value):
+def filter_mapping(key, value, tenant):
     try:
         if value is None:
             return None
@@ -60,7 +60,7 @@ def filter_mapping(key, value):
         if key == "severity_level":
             return ("severity", Severity.objects.filter(level=value).first())
         if key == "location":
-            return ("entity", PlantEntity.objects.get(entity_uid=value))
+            return ("entity", PlantEntity.objects.get(entity_uid=value, entity_type__tenant=tenant))
         if key == "flag_type":
             return ("flag_type", FlagType.objects.get(name=value))
     except Exception as err:
@@ -229,7 +229,7 @@ def get_delivery_data(
         lookup_filters &= Q(tenant=tenant)
         lookup_filters &= Q(created_at__range=(from_date, to_date ))
         for key, value in validated_filters:
-            filter_map = filter_mapping(key, value)
+            filter_map = filter_mapping(key, value, tenant=tenant)
             if filter_map:
                 lookup_filters &= Q(filter_map) 
         
@@ -262,7 +262,7 @@ def get_delivery_data(
                 if not flags.exists():
                     row.update(
                         {
-                            flag.flag_type.name: '⬜',
+                            flag.flag_type.name: '🟩',
                         }
                     )
                     
