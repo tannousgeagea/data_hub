@@ -36,6 +36,10 @@ from metadata.models import (
     TenantTableFilter,
 )
 
+from tenants.models import (
+    TenantStorageSettings,
+)
+
 def map_item_assets(delivery_id, item):
     try:
         if "delivery" in item.key:
@@ -158,8 +162,6 @@ def get_delivery_assets(response: Response, delivery_id:str):
             return results
             
         delivery = Delivery.objects.get(delivery_id=delivery_id)
-        delivery_media = DeliveryMedia.objects.filter(delivery=delivery)
-        
         table_assets = TenantTableAsset.objects.filter(
             tenant_table=TenantTable.objects.get(
                 tenant=delivery.tenant,
@@ -168,6 +170,7 @@ def get_delivery_assets(response: Response, delivery_id:str):
             is_active=True,
         )
         
+        AzAccoutKey = TenantStorageSettings.objects.get(tenant=delivery.tenant).account_key
         placeholder = {
             'url': f"https://wacoreblob.blob.core.windows.net/amk/placeholder.jpg?{AzAccoutKey}",
             'name': "Bild in Vorbereitung",
@@ -189,6 +192,26 @@ def get_delivery_assets(response: Response, delivery_id:str):
             table_asset_items = TableAssetItem.objects.filter(asset=table_asset.table_asset, is_active=True)
             for item in table_asset_items:
                 medias = map_item_assets(delivery_id=delivery_id, item=item)
+                
+                if len(medias) >= 2 and "delivery" in item.key and item.media_type == "video":
+                    for i, media_model in enumerate(medias):
+                        items.append(
+                            {
+                                'key': f'{item.key}_{str(i + 1)}',
+                                'title': f'{str(i + 1)} - {TableAssetItemLocalization.objects.get(asset_item=item, language=language).title}' if TableAssetItemLocalization.objects.filter(asset_item=item, language=language) else item.name,
+                                'type': item.media_type,
+                                'data': [
+                                    {
+                                        'url': f"{media_model.media.media_url}?{AzAccoutKey}",
+                                        'name': media_model.media.media_name,
+                                        'time': media_model.media.created_at.strftime(DATETIME_FORMAT),
+                                    }
+                                ]
+                            }
+                        )
+                    
+                    continue
+                
                 items.append(
                     {
                         'key': item.key,
