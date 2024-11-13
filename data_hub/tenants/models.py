@@ -6,6 +6,7 @@ class Tenant(models.Model):
     tenant_name = models.CharField(max_length=255)
     location = models.CharField(max_length=100)
     domain = models.CharField(max_length=50)
+    default_language = models.CharField(max_length=100, choices=(('en', 'English'), ('de', 'German'), ('es', 'Spanish'), ('fr', 'French')), null=True, blank=True)
     is_active = models.BooleanField(default=True, help_text="Indicates if the filter is currently active.")
     created_at = models.DateTimeField(auto_now_add=True)
     meta_info = models.JSONField(null=True, blank=True)
@@ -68,3 +69,17 @@ class PlantEntity(models.Model):
 
     def __str__(self):
         return f'Entity {self.entity_uid} in {self.entity_type.tenant.tenant_name}'
+
+class TenantStorageSettings(models.Model):
+    tenant = models.OneToOneField(Tenant, on_delete=models.RESTRICT, related_name='storage_settings')
+    provider_name = models.CharField(max_length=100, choices=[('azure', 'Azure'), ('aws', 'AWS'), ('gcp', 'GCP')])
+    account_name = models.CharField(max_length=255, help_text="Storage Account Name")
+    account_key = models.CharField(max_length=255, blank=True, help_text="Storage Account Key or equivalent")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "tenant_storage_settings"
+        verbose_name_plural = "Tenant Storage Settings"
+
+    def __str__(self):
+        return f"{self.provider_name} settings for {self.tenant.tenant_name}"

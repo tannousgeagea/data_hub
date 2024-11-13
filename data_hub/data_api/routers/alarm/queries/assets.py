@@ -33,6 +33,10 @@ from metadata.models import (
     TenantTableFilter,
 )
 
+from tenants.models import (
+    TenantStorageSettings,
+)
+
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 AzAccoutKey = os.getenv('AzAccoutKey')
 
@@ -128,10 +132,9 @@ This API is used to fetch comprehensive information and analytics related to a s
 @router.api_route(
     "/alarm/assets/{event_uid}", methods=["GET"], tags=["Alarm"], description=description,
 )
-def get_alarm_assets(response: Response, event_uid:str):
+def get_alarm_assets(response: Response, event_uid:str, language:str=None):
     results = {}
     try:
-        language = Language.objects.get(code='de')
         if event_uid == 'null':
             results['error'] = {
                 'status_code': "bad-request",
@@ -154,6 +157,29 @@ def get_alarm_assets(response: Response, event_uid:str):
         alarm_media = AlarmMedia.objects.filter(alarm=alarm)
 
         tenant = alarm.tenant
+
+        msg = f'using given language {language}'
+        if not language:
+            lang_code = tenant.default_language
+            if lang_code:
+                language = lang_code
+                msg = f'using default language: {language}'
+            else:
+                language = 'de'
+                msg = f"using german language"
+        
+        if not Language.objects.filter(code=language).exists():
+            results = {
+                "error": {
+                    "status_code": "not found",
+                    "status_description": f"Given Language {language} not supported",
+                    "detail": f"Given Language {language} not supported! Supported Language: {[lang.name for lang in Language.objects.all()]}",
+                }
+            }    
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return results
+        
+        language = Language.objects.get(code=language)
         table_assets = TenantTableAsset.objects.filter(
             tenant_table=TenantTable.objects.get(
                 tenant=tenant,
@@ -162,6 +188,7 @@ def get_alarm_assets(response: Response, event_uid:str):
             is_active=True,
         )
         
+        AzAccoutKey = TenantStorageSettings.objects.get(tenant=tenant).account_key
         placeholder = {
             'url': f"https://wacoreblob.blob.core.windows.net/amk/placeholder.jpg?{AzAccoutKey}",
             'name': "Bild in Vorbereitung",
@@ -207,6 +234,7 @@ def get_alarm_assets(response: Response, event_uid:str):
             )
         
         results = {
+            "msg": msg,
             "categories": categories,
             "data": data,
         }

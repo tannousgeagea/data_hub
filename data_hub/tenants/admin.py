@@ -2,6 +2,7 @@ from django.contrib import admin
 from unfold.admin import ModelAdmin, TabularInline, StackedInline
 from tenants.models import Tenant, EntityType, PlantEntity
 from metadata.models import PlantEntityLocalization
+from .models import TenantStorageSettings
 
 
 class PlantEntityLocalizationInline(TabularInline):  # or StackedInline
@@ -10,12 +11,26 @@ class PlantEntityLocalizationInline(TabularInline):  # or StackedInline
     # fields = ('language', 'title', 'description', 'created_at')
     # readonly_fields = ('created_at',)
 
+class EntityTypeInline(TabularInline):
+    model = EntityType
+    extra = 1
+
+class PlantEntityInline(TabularInline):
+    model = PlantEntity
+    extra = 1
+    
+class TenantStorageSettingsInline(TabularInline):
+    model = TenantStorageSettings
+    extra = 1
+    
 # Register your models here.
 @admin.register(Tenant)
 class TenantAdmin(ModelAdmin):
     list_display = ('tenant_id', 'tenant_name', 'location', 'domain', 'is_active', 'created_at')
     search_fields = ('tenant_name', 'location', 'domain')
     list_filter = ('is_active',)
+    
+    inlines = [EntityTypeInline, TenantStorageSettingsInline]
     
 @admin.register(EntityType)
 class EntityTypeAdmin(ModelAdmin):
@@ -27,6 +42,8 @@ class EntityTypeAdmin(ModelAdmin):
     list_filter = ('tenant', 'created_at')  # Add filters for plant and creation date
     ordering = ('-created_at',)  # Order by creation date, newest first
     readonly_fields = ('created_at',)  # Make created_at field read-only
+    
+    inlines = [PlantEntityInline]
 
 @admin.register(PlantEntity)
 class PlantEntityAdmin(ModelAdmin):
@@ -37,6 +54,15 @@ class PlantEntityAdmin(ModelAdmin):
     search_fields = ('entity_uid', 'description', 'entity_type__entity_type')  # Search by UID, description, and entity type
     list_filter = ('entity_type', 'created_At')  # Add filters for entity type and creation date
     ordering = ('-created_At',)  # Order by creation date, newest first
-    readonly_fields = ('created_At',)  # Make created_At field read-only
-        
+    readonly_fields = ('created_At',)  # Make created_At field read-only    
     inlines = [PlantEntityLocalizationInline]
+    
+@admin.register(TenantStorageSettings)
+class TenantStorageSettingsAdmin(ModelAdmin):
+    """
+    Admin interface for the TenantStorageSetting model.
+    """
+    list_display = ("tenant", "provider_name", "account_name")
+    list_filter = ("tenant", "created_at")
+    search_filelds = ("tenant__tenant_name")
+    
