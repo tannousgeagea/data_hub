@@ -11,6 +11,7 @@ from .models import (
     TenantFlagDeployment,
     Alarm,
     AlarmMedia,
+    DeliveryERPAttachment,
 )
 
 # Admin for Media Model
@@ -96,3 +97,11 @@ class AlarmMediaAdmin(ModelAdmin):
         return obj.media.created_at
     
     show_created_at.short_description = "Created at"
+    
+
+@admin.register(DeliveryERPAttachment)
+class DeliveryERPAttachmentAdmin(ModelAdmin):
+    list_display = ('delivery', 'attachment_type', 'value', 'acquisition_configuration', 'source_reference', 'fetched_at', 'created_at')
+    search_fields = ('delivery__delivery_id', 'attachment_type__name', 'source_reference')
+    list_filter = ('attachment_type', 'fetched_at', 'created_at')
+    ordering = ('-created_at',)

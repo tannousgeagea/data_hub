@@ -79,7 +79,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'data_hub.wsgi.application'
-
+LOGIN_REDIRECT_URL = '/metadata/'
+LOGOUT_REDIRECT_URL = '/login/'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -340,6 +341,41 @@ UNFOLD = {
                             "admin:metadata_tenanttableasset_changelist"
                         ),
                     },
+                    {
+                        "title": _("ERP Data Types"),
+                        "icon": "enterprise",
+                        "link": reverse_lazy(
+                            "admin:metadata_erpdatatype_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Tenant Attachment Requirements"),
+                        "icon": "rv_hookup",
+                        "link": reverse_lazy(
+                            "admin:metadata_tenantattachmentrequirement_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Protocols"),
+                        "icon": "sip",
+                        "link": reverse_lazy(
+                            "admin:metadata_protocol_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Methods"),
+                        "icon": "tactic",
+                        "link": reverse_lazy(
+                            "admin:metadata_method_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Attachment Acquisition Configurations"),
+                        "icon": "manufacturing",
+                        "link": reverse_lazy(
+                            "admin:metadata_attachmentacquisitionconfiguration_changelist"
+                        ),
+                    },
                 ],
             },
             {
@@ -416,7 +452,13 @@ UNFOLD = {
                             "admin:acceptance_control_alarmmedia_changelist"
                         ),
                     },
-                    
+                    {
+                        "title": _("Delivery ERP Attachment"),
+                        "icon": "package",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_deliveryerpattachment_changelist"
+                        ),
+                    },
                 ]
             }
  

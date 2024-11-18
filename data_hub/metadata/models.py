@@ -391,3 +391,74 @@ class TenantTableAsset(models.Model):
         
     def __str__(self):
         return f"{self.tenant_table}: {self.table_asset.key}"
+    
+########################################################################################################
+#######################################################################################################
+class ERPDataType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(null=True, blank=True)
+    data_type = models.ForeignKey(DataType, on_delete=models.RESTRICT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'erp_data_type'
+        verbose_name_plural = 'ERP Data Types'
+
+    def __str__(self):
+        return self.name
+
+class TenantAttachmentRequirement(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.RESTRICT)
+    attachment_type = models.ForeignKey(ERPDataType, on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tenant_attachment_requirement'
+        verbose_name_plural = 'Tenant Attachment Requirements'
+        unique_together = ('tenant', 'attachment_type')
+
+    def __str__(self):
+        return f"{self.tenant.tenant_name}: {self.attachment_type.name}"
+
+class Protocol(models.Model):
+    name = models.CharField(max_length=50, unique=True, choices=[
+        ('http', 'HTTP'),
+        ('websocket', 'WebSocket'),
+        ('ftp', 'FTP')
+    ])
+    description = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'protocol'
+        verbose_name_plural = 'Protocols'
+
+    def __str__(self):
+        return self.name
+    
+class Method(models.Model):
+    name = models.CharField(max_length=50, unique=True, choices=[('get', 'GET'), ('post', 'POST')])
+    description = models.TextField(null=True, blank=True)
+    protocol = models.ForeignKey(Protocol, on_delete=models.SET_NULL, null=True, blank=True)
+    endpoint_url = models.CharField(max_length=255, null=True, blank=True, help_text="Endpoint URL if required for API")
+    created_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        db_table = 'method'
+        verbose_name_plural = 'Methods'
+
+    def __str__(self):
+        return self.name
+class AttachmentAcquisitionConfiguration(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.RESTRICT)
+    attachment_type = models.ForeignKey(ERPDataType, on_delete=models.RESTRICT)
+    method = models.ForeignKey(Method, on_delete=models.RESTRICT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'attachment_acquisition_configuration'
+        verbose_name_plural = 'Attachment Acquisition Configurations'
+        unique_together = ('tenant', 'attachment_type', 'method')
+
+    def __str__(self):
+        return f"{self.tenant.tenant_name}: {self.attachment_type.name} via {self.method.name}"

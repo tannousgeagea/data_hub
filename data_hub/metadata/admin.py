@@ -13,6 +13,15 @@ from .models import (
     TenantTableAsset
     )
 
+from .models import (
+    ERPDataType, 
+    TenantAttachmentRequirement, 
+    Protocol, 
+    Method, 
+    AttachmentAcquisitionConfiguration,
+)
+
+
 class TableFieldLocalizationInline(TabularInline):
     model = TableFieldLocalization
     extra = 1
@@ -135,7 +144,6 @@ class TableAssetItemLocalizationInline(TabularInline):
 class TableAssetItemInline(TabularInline):
     model = TableAssetItem
     extra = 1
-
 @admin.register(TableAsset)
 class TableAssetAdmin(ModelAdmin):
     list_display = ('key', 'is_active', 'is_external', 'created_at')
@@ -153,3 +161,39 @@ class TenantTableAssetAdmin(ModelAdmin):
     list_display = ('tenant_table', 'table_asset', 'is_active', 'field_order', 'created_at')
     list_filter = ('is_active',)
     search_fields = ('table_asset__key', 'tenant_table__name')
+    
+##########################################################################
+###################### ERP Data ##########################################
+@admin.register(ERPDataType)
+class ERPDataTypeAdmin(ModelAdmin):
+    list_display = ('name', 'description', 'data_type', 'created_at')
+    search_fields = ('name', 'description')
+    list_filter = ('data_type',)
+    ordering = ('created_at',)
+
+@admin.register(TenantAttachmentRequirement)
+class TenantAttachmentRequirementAdmin(ModelAdmin):
+    list_display = ('tenant', 'attachment_type', 'is_active', 'created_at')
+    search_fields = ('tenant__tenant_name', 'attachment_type__name')
+    list_filter = ('is_active', 'created_at')
+    ordering = ('-created_at',)
+
+@admin.register(Protocol)
+class ProtocolAdmin(ModelAdmin):
+    list_display = ('name', 'description', 'created_at')
+    search_fields = ('name', 'description')
+    ordering = ('created_at',)
+
+@admin.register(Method)
+class MethodAdmin(ModelAdmin):
+    list_display = ('name', 'description', 'protocol', 'endpoint_url', 'created_at')
+    search_fields = ('name', 'description', 'endpoint_url')
+    list_filter = ('protocol',)
+    ordering = ('created_at',)
+
+@admin.register(AttachmentAcquisitionConfiguration)
+class AttachmentAcquisitionConfigurationAdmin(ModelAdmin):
+    list_display = ('tenant', 'attachment_type', 'method', 'created_at')
+    search_fields = ('tenant__tenant_name', 'attachment_type__name', 'method__name')
+    list_filter = ('created_at',)
+    ordering = ('-created_at',)

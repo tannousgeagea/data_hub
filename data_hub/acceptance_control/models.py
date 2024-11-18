@@ -4,7 +4,11 @@ from tenants.models import (
     PlantEntity
 )
 
-from metadata.models import Language
+from metadata.models import (
+    Language,
+    ERPDataType,
+    AttachmentAcquisitionConfiguration,
+)
 
 class Media(models.Model):
     IMAGE = 'image'
@@ -147,6 +151,7 @@ class Alarm(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     event_uid = models.CharField(max_length=255, unique=True)
     delivery_id = models.CharField(max_length=255, null=True, blank=True)
+    ack_status = models.BooleanField(default=False)
     
     class Meta:
         db_table = 'alarm'
@@ -165,3 +170,21 @@ class AlarmMedia(models.Model):
         
     def __str__(self):
         return f"{self.alarm}: {self.media}"
+    
+
+class DeliveryERPAttachment(models.Model):
+    delivery = models.ForeignKey(Delivery, on_delete=models.RESTRICT)
+    attachment_type = models.ForeignKey(ERPDataType, on_delete=models.CASCADE)
+    value = models.CharField(max_length=255, null=True, blank=True)
+    acquisition_configuration = models.ForeignKey(AttachmentAcquisitionConfiguration, on_delete=models.SET_NULL, null=True)
+    source_reference = models.CharField(max_length=255, null=True, blank=True, help_text="Optional reference to external source or entry")
+    fetched_at = models.DateTimeField(null=True, blank=True, help_text="Timestamp for API data retrieval")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'delivery_erp_attachment'
+        verbose_name_plural = 'Delivery ERP Attachments'
+        unique_together = ('delivery', 'attachment_type')
+
+    def __str__(self):
+        return f"{self.delivery.delivery_id}: {self.attachment_type.name}"

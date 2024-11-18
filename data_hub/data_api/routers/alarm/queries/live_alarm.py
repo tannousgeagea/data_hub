@@ -4,22 +4,20 @@ import time
 import math
 import django
 from django.db import connection
-from django.db.models import Max, F
 from django.db.models import Q
 from fastapi import status
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 from datetime import time as dtime
-from typing import Optional, Dict
 from typing import Callable
 from fastapi import Request
 from fastapi import Response
 from fastapi import APIRouter
-from fastapi import Query
-from fastapi import HTTPException
+from fastapi import HTTPException, Query, Body, Form
 from fastapi.routing import APIRoute
-from pydantic import BaseModel, create_model, ValidationError
+from typing import Dict, List, Optional
+from pydantic import BaseModel, Field, create_model, ValidationError
 from common_utils.timezone_utils.timeloc import (
     get_location_and_timezone,
     convert_to_local_time,
@@ -35,13 +33,10 @@ from tenants.models import (
 )
 
 from acceptance_control.models import (
-    Delivery, 
-    DeliveryFlag, 
-    TenantFlagDeployment,
+    Alarm,
     Severity,
     FlagType,
     FlagTypeLocalization,
-    DeliveryERPAttachment,
     )
 
 from metadata.models import (
@@ -50,9 +45,7 @@ from metadata.models import (
     Language,
     TenantTableFilter,
     PlantEntityLocalization,
-    TenantAttachmentRequirement,
 )
-
 
 def filter_mapping(key, value, tenant):
     try:
@@ -96,27 +89,24 @@ def create_filter_model(fields: Dict[str, Optional[str]]):
     return create_model("DynamicFilterModel", **{k: (Optional[str], None) for k in fields})
 
 description = """
-    URL Path: /delivery
+    URL Path: /alarm
 
     TO DO
 
 """
 
 @router.api_route(
-    "/delivery", methods=["GET"], tags=["Delivery"], description=description,
+    "/alarm/live", methods=["GET"], tags=["Alarm"], description=description,
 )
-def get_delivery_data(
+def get_alarm_data(
     response: Response, 
     tenant_domain:str,
-    user_filters: Optional[str] = Query(None),
-    from_date:datetime=None,
-    to_date:datetime=None,
-    items_per_page:int=15,
-    page:int=1,
+    severity_level:str="2",
     language:str='de',
     ):
     results = {}
     try:
+        
         if not Language.objects.filter(code=language).exists():
             results = {
                 "error": {
@@ -148,19 +138,7 @@ def get_delivery_data(
             response.status_code = status.HTTP_404_NOT_FOUND
             return results
         
-        if not Tenant.objects.filter(domain=tenant_domain).exists():
-            results = {
-                "error": {
-                    "status_code": "not found",
-                    "status_description": f"Tenant {tenant_domain} not found",
-                    "detail": f"Tenant {Tenant} not found ! Existing options: {[tenant.domain for tenant in Tenant.objects.all()]}",
-                }
-            }
-            
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return results
-        
-        if not TableType.objects.filter(name='delivery').exists():
+        if not TableType.objects.filter(name='alarm').exists():
             results = {
                 "error": {
                     "status_code": "not found",
@@ -173,8 +151,21 @@ def get_delivery_data(
             return results
         
         language = Language.objects.get(code=language)
-        table_type = TableType.objects.get(name='delivery')
+        table_type = TableType.objects.get(name='alarm')
         tenant = Tenant.objects.get(domain=tenant_domain)
+        
+        if not TenantTable.objects.filter(tenant=tenant, table_type=table_type):
+            results = {
+                "error": {
+                    "status_code": "not found",
+                    "status_description": f"Table Type alarm not defined for tenant {tenant_domain}",
+                    "detail": f"Table Type alarm not found for {tenant_domain}!" \
+                        f"Existing options: {[tenant_table.table_type.name for tenant_table in TableType.objects.filter(tenant=tenant)]}",
+                }
+            }
+            
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return results
         
         today = datetime.today()
         if from_date is None:
@@ -185,7 +176,6 @@ def get_delivery_data(
             
         from_date = from_date.replace(tzinfo=timezone.utc)
         to_date = datetime.combine(to_date, dtime.max).replace(tzinfo=timezone.utc)
-        
         
         if page < 1:
             page = 1
@@ -226,86 +216,79 @@ def get_delivery_data(
             
             response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
             return results
-        
+
         lookup_filters = Q()
         lookup_filters &= Q(tenant=tenant)
         lookup_filters &= Q(created_at__range=(from_date, to_date ))
         for key, value in validated_filters:
-            filter_map = filter_mapping(key, value, tenant=tenant)
+            filter_map = filter_mapping(key, value, tenant)
             if filter_map:
                 lookup_filters &= Q(filter_map) 
         
-        language = Language.objects.get(code='de')
-        deliveries = Delivery.objects.filter(lookup_filters).order_by('-created_at')
         rows = []
-        total_record = len(deliveries)
-        for delivery in deliveries[(page - 1) * items_per_page:page * items_per_page]:
-            row = {
-                "id": delivery.id,
-                "delivery_id": delivery.delivery_id,
-                "delivery_date": convert_to_local_time(utc_time=delivery.created_at, timezone_str=timezone_str).strftime('%Y-%m-%d'),
-                "start_time": convert_to_local_time(utc_time=delivery.delivery_start, timezone_str=timezone_str).strftime("%H:%M:%S"),
-                "end_time": convert_to_local_time(utc_time=delivery.delivery_end, timezone_str=timezone_str).strftime("%H:%M:%S"),
-                "location": PlantEntityLocalization.objects.get(plant_entity=delivery.entity, language=language).title if PlantEntityLocalization.objects.filter(plant_entity=delivery.entity, language=language).exists() else delivery.delivery_location,
+        alarms = Alarm.objects.filter(lookup_filters).order_by('-created_at')
+        for alarm in alarms[(page - 1) * items_per_page:page * items_per_page]:
+            flag_type = alarm.flag_type
+            plant_entity = PlantEntity.objects.get(entity_uid=alarm.entity.entity_uid, entity_type__tenant=tenant)
+            
+            if not PlantEntityLocalization.objects.filter(
+                plant_entity=plant_entity,
+                language=language,
+            ).exists():
+                results['error'] = {
+                    'status_code': "non-matching-query",
+                    'status_description': f'localization {language.name} not found for {plant_entity.entity_uid}',
+                    'detail': f'localization {language.name} not found for {plant_entity.entity_uid}',
                 }
 
+                response.status_code = status.HTTP_404_NOT_FOUND
+                return results
+                  
+            if not FlagTypeLocalization.objects.filter(
+                flag_type=flag_type,
+                language=language
+            ).exists():
+                results['error'] = {
+                    'status_code': "non-matching-query",
+                    'status_description': f'localization {language.name} not found for {flag_type.name}',
+                    'detail': f'localization {language.name} not found for {flag_type.name}',
+                }
 
-            flags_deployment = TenantFlagDeployment.objects.filter(tenant=tenant)
-            for flag in flags_deployment:
-                flags = DeliveryFlag.objects.filter(
-                    delivery=delivery,
-                    flag_type=flag.flag_type
-                ).annotate(
-                    max_severity=Max('severity__level')
-                ).filter(
-                    severity__level=F('max_severity')
-                )
-                
-                if not flags.exists():
-                    row.update(
-                        {
-                            flag.flag_type.name: '🟩',
-                        }
-                    )
-                    
-                    continue
-                
-                flag = flags.first()
-                row.update(
-                    {
-                        flag.flag_type.name: flag.severity.unicode_char
-                    }
-                )
+                response.status_code = status.HTTP_404_NOT_FOUND
+                return results
+
+            plant_entity_localization = PlantEntityLocalization.objects.get(
+                plant_entity=PlantEntity.objects.get(entity_uid=alarm.entity.entity_uid, entity_type__tenant=tenant),
+                language=language,
+            )
             
-            erp_attachments = TenantAttachmentRequirement.objects.filter(tenant=tenant, is_active=True)
-            for erp_attachment in erp_attachments:
-                if not DeliveryERPAttachment.objects.filter(
-                    delivery=delivery,
-                    attachment_type=erp_attachment.attachment_type
-                ).exists():
-                    row.update(
-                        {
-                            erp_attachment.attachment_type.name: "⬛",
-                        }
-                    )
-                    continue
+            flag_type_localization = FlagTypeLocalization.objects.get(
+                flag_type=flag_type,
+                language=language,
+            )
+            
+            row = {
+                "id": alarm.id,
+                "event_uid": alarm.event_uid,
+                "event_date": alarm.created_at.strftime('%Y-%m-%d'),
+                "start_time": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
+                "end_time": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
+                "location": plant_entity_localization.title,
+                "event_name": flag_type_localization.title,
+                "severity_level": alarm.severity.unicode_char,
+                }
                 
-                row.update(
-                    {
-                        erp_attachment.attachment_type.name: DeliveryERPAttachment.objects.get(
-                            delivery=delivery,
-                            attachment_type=erp_attachment.attachment_type
-                        ).value,
-                    }
-                )
             rows.append(
                 row
             )
         
+        total_record = len(alarms)
         results['data'] = {
+            "language": language.name,
+            "tenant": tenant.tenant_name,
             "type": "collection",
             "total_record": total_record,
-            "filters": lookup_filters,
+            "user_filters": lookup_filters.children,
             "pages": math.ceil(total_record / items_per_page),
             "items": rows,
         }
@@ -313,7 +296,6 @@ def get_delivery_data(
         results["detail"] = "data retrieved successfully"
         results["status_description"] = "OK"
     
-        
     except ObjectDoesNotExist as e:
         results['error'] = {
             'status_code': "non-matching-query",
@@ -325,12 +307,12 @@ def get_delivery_data(
         
     except HTTPException as e:
         results['error'] = {
-            "status_code": "not found",
-            "status_description": "Request not Found",
-            "detail": f"{e}",
+            "status_code": f"{e.status_code}",
+            "status_description": f"{e.detail}",
+            "detail": f"{e.detail}",
         }
         
-        response.status_code = status.HTTP_404_NOT_FOUND
+        response.status_code = e.status_code
     
     except Exception as e:
         results['error'] = {
