@@ -30,10 +30,12 @@ from django.core.exceptions import ObjectDoesNotExist
 from tenants.models import (
     Tenant,
     PlantEntity,
+    TenantStorageSettings,
 )
 
 from acceptance_control.models import (
     Alarm,
+    AlarmMedia,
     Severity,
     FlagType,
     FlagTypeLocalization,
@@ -50,6 +52,9 @@ from metadata.models import (
 def filter_mapping(key, value, tenant):
     try:
         if value is None:
+            return None
+        
+        if value == "all":
             return None
         
         if key == "severity_level":
@@ -157,6 +162,7 @@ def get_alarm_data(
         language = Language.objects.get(code=language)
         table_type = TableType.objects.get(name='alarm')
         tenant = Tenant.objects.get(domain=tenant_domain)
+        AzAccoutKey = TenantStorageSettings.objects.get(tenant=tenant).account_key
         
         if not TenantTable.objects.filter(tenant=tenant, table_type=table_type):
             results = {
@@ -271,6 +277,14 @@ def get_alarm_data(
                 language=language,
             )
             
+            media = AlarmMedia.objects.filter(
+                alarm=alarm,
+                media__media_type='image'
+            ).first()
+            
+            if not media:
+                continue
+            
             row = {
                 "id": alarm.id,
                 "event_uid": alarm.event_uid,
@@ -280,6 +294,7 @@ def get_alarm_data(
                 "location": plant_entity_localization.title,
                 "event_name": flag_type_localization.title,
                 "severity_level": alarm.severity.unicode_char,
+                "preview": f"{media.media.media_url}?{AzAccoutKey}",
                 }
                 
             rows.append(

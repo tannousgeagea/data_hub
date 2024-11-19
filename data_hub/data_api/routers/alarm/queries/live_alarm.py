@@ -30,10 +30,13 @@ from django.core.exceptions import ObjectDoesNotExist
 from tenants.models import (
     Tenant,
     PlantEntity,
+    TenantStorageSettings,
 )
+
 
 from acceptance_control.models import (
     Alarm,
+    AlarmMedia,
     Severity,
     FlagType,
     FlagTypeLocalization,
@@ -81,13 +84,6 @@ router = APIRouter(
     route_class=TimedRoute,
 )
 
-def create_filter_model(fields: Dict[str, Optional[str]]):
-    """
-    This function creates a dynamic Pydantic model based on the fields provided,
-    without setting default values.
-    """
-    return create_model("DynamicFilterModel", **{k: (Optional[str], None) for k in fields})
-
 description = """
     URL Path: /alarm
 
@@ -98,14 +94,37 @@ description = """
 @router.api_route(
     "/alarm/live", methods=["GET"], tags=["Alarm"], description=description,
 )
-def get_alarm_data(
+def get_alarm_notification(
     response: Response, 
     tenant_domain:str,
-    severity_level:str="2",
-    language:str='de',
+    severity_level:str="3",
+    language:str=None,
+    items_per_page:int=15,
     ):
     results = {}
     try:
+        if not Tenant.objects.filter(domain=tenant_domain).exists():
+            results = {
+                "error": {
+                    "status_code": "not found",
+                    "status_description": f"Tenant {tenant_domain} not found",
+                    "detail": f"Tenant {Tenant} not found ! Existing options: {[tenant.domain for tenant in Tenant.objects.all()]}",
+                }
+            }
+            
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return results
+        
+        now = datetime.now(tz=timezone.utc)
+        before = (now - timedelta(hours=1)).replace(tzinfo=timezone.utc)
+        
+        tenant = Tenant.objects.get(domain=tenant_domain)
+        if not language:
+            lang_code = tenant.default_language
+            if lang_code:
+                language = lang_code
+            else:
+                language = 'de'
         
         if not Language.objects.filter(code=language).exists():
             results = {
@@ -119,118 +138,20 @@ def get_alarm_data(
             response.status_code = status.HTTP_404_NOT_FOUND
             return results
         
-        filters_dict = {}
-        if user_filters:
-            try:
-                filters_dict = json.loads(user_filters)
-            except json.JSONDecodeError:
-                raise HTTPException(status_code=400, detail="Invalid JSON format for user_filters")
-
-        if not Tenant.objects.filter(domain=tenant_domain).exists():
-            results = {
-                "error": {
-                    "status_code": "not found",
-                    "status_description": f"Tenant {tenant_domain} not found",
-                    "detail": f"Tenant {Tenant} not found ! Existing options: {[tenant.domain for tenant in Tenant.objects.all()]}",
-                }
-            }
-            
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return results
-        
-        if not TableType.objects.filter(name='alarm').exists():
-            results = {
-                "error": {
-                    "status_code": "not found",
-                    "status_description": f"Table Type alarm not found",
-                    "detail": f"Table Type alarm not found ! Existing options: {[table_type.name for table_type in TableType.objects.all()]}",
-                }
-            }
-            
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return results
-        
         language = Language.objects.get(code=language)
-        table_type = TableType.objects.get(name='alarm')
-        tenant = Tenant.objects.get(domain=tenant_domain)
+        AzAccoutKey = TenantStorageSettings.objects.get(tenant=tenant).account_key
         
-        if not TenantTable.objects.filter(tenant=tenant, table_type=table_type):
-            results = {
-                "error": {
-                    "status_code": "not found",
-                    "status_description": f"Table Type alarm not defined for tenant {tenant_domain}",
-                    "detail": f"Table Type alarm not found for {tenant_domain}!" \
-                        f"Existing options: {[tenant_table.table_type.name for tenant_table in TableType.objects.filter(tenant=tenant)]}",
-                }
-            }
-            
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return results
-        
-        today = datetime.today()
-        if from_date is None:
-            from_date = datetime(today.year, today.month, today.day)
-        
-        if to_date is None:
-            to_date = from_date
-            
-        from_date = from_date.replace(tzinfo=timezone.utc)
-        to_date = datetime.combine(to_date, dtime.max).replace(tzinfo=timezone.utc)
-        
-        if page < 1:
-            page = 1
-        
-        if items_per_page<=0:
-            results['error'] = {
-                'status_code': 400,
-                'status_description': f'Bad Request, items_per_pages should not be 0',
-                'detail': "division by zero."
-            }
-
-            response.status_code = status.HTTP_400_BAD_REQUEST    
-            return results
-        
-        tenant_table = TenantTable.objects.get(
-            tenant=tenant,
-            table_type=table_type
-        )
-        
-        tenant_table_filter = TenantTableFilter.objects.filter(
-            tenant_table=tenant_table,
-            is_active=True
-        )
-        
-        filter_fields = {
-            fil.table_filter.filter_name: '' for fil in tenant_table_filter
-        }
-        
-        
-        DynamicFilterModel = create_filter_model(filter_fields)
-        try:
-            validated_filters = DynamicFilterModel(**filters_dict)
-        except ValidationError as e:
-            results['error'] = {
-                "status_code": 422,
-                "detail": f"{e.errors()}"
-            }
-            
-            response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
-            return results
-
         lookup_filters = Q()
+        lookup_filters &= Q(ack_status=False)
         lookup_filters &= Q(tenant=tenant)
-        lookup_filters &= Q(created_at__range=(from_date, to_date ))
-        for key, value in validated_filters:
-            filter_map = filter_mapping(key, value, tenant)
-            if filter_map:
-                lookup_filters &= Q(filter_map) 
+        lookup_filters &= Q(("severity", Severity.objects.filter(level__gte=severity_level).first()))
+        lookup_filters &= Q(created_at__range=(before, now))
         
         rows = []
         alarms = Alarm.objects.filter(lookup_filters).order_by('-created_at')
-        for alarm in alarms[(page - 1) * items_per_page:page * items_per_page]:
+        for alarm in alarms:
             flag_type = alarm.flag_type
             plant_entity = PlantEntity.objects.get(entity_uid=alarm.entity.entity_uid, entity_type__tenant=tenant)
-            
             if not PlantEntityLocalization.objects.filter(
                 plant_entity=plant_entity,
                 language=language,
@@ -267,15 +188,33 @@ def get_alarm_data(
                 language=language,
             )
             
+            media = AlarmMedia.objects.filter(
+                alarm=alarm,
+                media__media_type='image'
+            ).first()
+            
+            if not media:
+                continue
+            
             row = {
                 "id": alarm.id,
                 "event_uid": alarm.event_uid,
                 "event_date": alarm.created_at.strftime('%Y-%m-%d'),
-                "start_time": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
-                "end_time": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
+                "timestamp": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
                 "location": plant_entity_localization.title,
                 "event_name": flag_type_localization.title,
                 "severity_level": alarm.severity.unicode_char,
+                "ack_status": alarm.ack_status,
+                "url": f"{media.media.media_url}?{AzAccoutKey}",
+                "name": media.media.media_name,
+                "type": media.media.media_type,
+                # "media": [
+                #     {
+                #         "url": f"{media.media.media_url}?{AzAccoutKey}",
+                #         "name": media.media.media_name,
+                #         "type": media.media.media_type,
+                #     }   
+                # ]
                 }
                 
             rows.append(
@@ -292,8 +231,81 @@ def get_alarm_data(
             "pages": math.ceil(total_record / items_per_page),
             "items": rows,
         }
+        
         results['status_code'] = "ok"
         results["detail"] = "data retrieved successfully"
+        results["status_description"] = "OK"
+    
+    except ObjectDoesNotExist as e:
+        results['error'] = {
+            'status_code': "non-matching-query",
+            'status_description': f'Matching query was not found',
+            'detail': f"matching query does not exist. {e}"
+        }
+
+        response.status_code = status.HTTP_404_NOT_FOUND
+        
+    except HTTPException as e:
+        results['error'] = {
+            "status_code": f"{e.status_code}",
+            "status_description": f"{e.detail}",
+            "detail": f"{e.detail}",
+        }
+        
+        response.status_code = e.status_code
+    
+    except Exception as e:
+        results['error'] = {
+            'status_code': 'server-error',
+            "status_description": "Internal Server Error",
+            "detail": str(e),
+        }
+        
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    
+    return results
+
+
+description = """
+    URL Path: /alarm
+
+    TO DO
+
+"""
+
+@router.api_route(
+    "/alarm/live", methods=["POST"], tags=["Alarm"], description=description,
+)
+def update_alarm_status(
+    response: Response,
+    event_uid: str,
+): 
+    results = {}
+    try:
+        if event_uid == 'null':
+            results['error'] = {
+                'status_code': "bad-request",
+                'status_description': "delivery_id is not supposed to be null",
+                'detail': 'delivery_id is null, please provide a valid delivery_id'
+            }
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return results
+    
+        if not Alarm.objects.filter(event_uid=event_uid).exists():
+            results['error'] = {
+                'status_code': "Not-Found",
+                'status_description': f"event_uid {event_uid} is not found",
+                'detail': 'please provide a valid delivery_id'
+            }
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return results
+            
+        alarm = Alarm.objects.get(event_uid=event_uid)
+        alarm.ack_status = True
+        alarm.save()
+        
+        results['status_code'] = "ok"
+        results["detail"] = "acknowledge status updated successfully"
         results["status_description"] = "OK"
     
     except ObjectDoesNotExist as e:

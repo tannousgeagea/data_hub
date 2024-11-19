@@ -66,11 +66,11 @@ description = """
 )
 def update_erp_data(
     response: Response,
-    delivery_id: str,
     erp_data_type: Dict,
     ):
     results = {}
     try:
+        delivery_id = erp_data_type.pop('delivery_id', None)
         if delivery_id == 'null':
             results['error'] = {
                 'status_code': "bad-request",

@@ -58,6 +58,9 @@ def filter_mapping(key, value, tenant):
     try:
         if value is None:
             return None
+
+        if value == "all":
+            return None
         
         if key == "severity_level":
             return ("severity", Severity.objects.filter(level=value).first())
