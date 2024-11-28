@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metadata Management</title>
+    <style>
+        /* Basic styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f9fc;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #34495e;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f9fbfd;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .container { width: 80%; margin: auto; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .logout-button {
+            padding: 8px 12px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        .logout-button:hover {
+            background-color: #2980b9;
+        }
+
+        h2, h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        label {
+            display: block;
+            margin-top: 10px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input, select, button {
+            margin-top: 5px;
+            padding: 10px;
+            width: 100%;
+            max-width: 300px;
+            border: 1px solid #dfe3e8;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button {
+            cursor: pointer;
+            background-color: #3498db;
+            color: #fff;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        /* Spinner styles */
+        .spinner {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Table styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f4f4f4;
+            color: #34495e;
+            font-weight: 600;
+        }
+
+        .no-fields {
+            color: #e74c3c;
+            font-style: italic;
+            text-align: center;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Metadata Management</h1>
+            <a href="{% url 'logout' %}" class="logout-button">Logout</a>
+        </div>
+
+        <!-- Tenant and Language Selection Section -->
+        <div class="section" id="tenant-language-section">
+            <h2>Select Tenant and Language</h2>
+            <label for="tenant-select">Available Tenants:</label>
+            <select id="tenant-select">
+                <option value="">Select Tenant</option>
+                {% for tenant in tenants %}
+                    <option value="{{ tenant.tenant_id }}">{{ tenant.tenant_name }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="language-select">Available Languages:</label>
+            <select id="language-select">
+                <option value="">Select Language</option>
+                {% for language in languages %}
+                    <option value="{{ language.id }}">{{ language.name }}</option>
+                {% endfor %}
+            </select>
+
+            <h3>Add New Language</h3>
+            <form id="add-language-form">
+                <label for="language-code">Code:</label>
+                <input type="text" id="language-code" name="code" placeholder="e.g., en" required>
+                <label for="language-name">Name:</label>
+                <input type="text" id="language-name" name="name" placeholder="e.g., English" required>
+                <button type="submit">Add Language</button>
+            </form>
+        </div>
+
+        <!-- Table Type Management Section -->
+        <div class="section" id="table-type-section">
+            <h2>Table Types</h2>
+            <label for="table-type-select">Available Table Types:</label>
+            <select id="table-type-select">
+                <option value="">Select Table Type</option>
+                {% for table_type in table_types %}
+                    <option value="{{ table_type.id }}">{{ table_type.name }}</option>
+                {% endfor %}
+            </select>
+
+            <h3>Add Table for Selected Tenant</h3>
+            <form id="add-tenant-table-form">
+                <button type="submit">Add Table</button>
+            </form>
+        </div>
+
+        <!-- Tenant Table Fields and Localization Management Section -->
+        <div class="section" id="tenant-table-section">
+            <h2>Tenant Table Fields</h2>
+
+            <!-- Spinner for loading indication -->
+            <div class="spinner" id="loading-spinner"></div>
+
+            <!-- Table to display fields -->
+            <div id="tenant-table-fields">
+                <!-- Fields for the selected tenant table will be displayed here in a table structure -->
+            </div>
+
+            <h3>Add Field Localization</h3>
+            <form id="add-field-localization-form">
+                <label for="field-select">Field:</label>
+                <select id="field-select">
+                    <!-- Fields will be populated based on the selected tenant table -->
+                </select>
+
+                <label for="localization-language">Language:</label>
+                <select id="localization-language">
+                    <option value="">Select Language for Localization</option>
+                    {% for language in languages %}
+                        <option value="{{ language.id }}">{{ language.name }}</option>
+                    {% endfor %}
+                </select>
+
+                <label for="localized-title">Localized Title:</label>
+                <input type="text" id="localized-title" name="title" required>
+
+                <label for="localized-description">Localized Description:</label>
+                <input type="text" id="localized-description" name="description">
+
+                <button type="submit">Add Localization</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const loadingSpinner = document.getElementById("loading-spinner");
+
+            function showSpinner() {
+                loadingSpinner.style.display = "block";
+            }
+
+            function hideSpinner() {
+                loadingSpinner.style.display = "none";
+            }
+
+            // Fetch fields for selected tenant and table type
+            document.getElementById("tenant-select").addEventListener("change", function() {
+                const tenantId = this.value;
+                const tableTypeId = document.getElementById("table-type-select").value;
+                if (tenantId && tableTypeId) {
+                    fetchTenantTableFields(tenantId, tableTypeId);
+                }
+            });
+
+            document.getElementById("table-type-select").addEventListener("change", function() {
+                const tenantId = document.getElementById("tenant-select").value;
+                const tableTypeId = this.value;
+                if (tenantId && tableTypeId) {
+                    fetchTenantTableFields(tenantId, tableTypeId);
+                }
+            });
+
+            function fetchTenantTableFields(tenantId, tableTypeId) {
+                showSpinner();
+
+                fetch(`/api/tenants/${tenantId}/table-types/${tableTypeId}/fields/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        hideSpinner();
+
+                        const tenantTableFieldsDiv = document.getElementById("tenant-table-fields");
+                        const fieldSelect = document.getElementById("field-select");
+
+                        tenantTableFieldsDiv.innerHTML = "<h3>Fields in Selected Tenant Table</h3>";
+                        fieldSelect.innerHTML = "<option value=''>Select Field for Localization</option>";
+
+                        if (data.length > 0) {
+                            let tableHtml = `
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                            `;
+
+                            data.forEach(field => {
+                                tableHtml += `
+                                    <tr>
+                                        <td>${field.name}</td>
+                                        <td>${field.type}</td>
+                                        <td>${field.description}</td>
+                                    </tr>
+                                `;
+                                fieldSelect.innerHTML += `<option value="${field.id}">${field.name}</option>`;
+                            });
+
+                            tableHtml += `</tbody></table>`;
+                            tenantTableFieldsDiv.innerHTML += tableHtml;
+                        } else {
+                            tenantTableFieldsDiv.innerHTML += "<p class='no-fields'>No fields exist for the selected table and tenant.</p>";
+                        }
+                    })
+                    .catch(error => {
+                        hideSpinner();
+                        console.error("Error fetching fields:", error);
+                    });
+            }
+
+            // Remaining JavaScript for form submissions is the same
+        });
+    </script>
+</body>
+</html>

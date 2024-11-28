@@ -462,3 +462,147 @@ class AttachmentAcquisitionConfiguration(models.Model):
 
     def __str__(self):
         return f"{self.tenant.tenant_name}: {self.attachment_type.name} via {self.method.name}"
+    
+
+########################################################################################################
+#######################################################################################################
+class FormField(models.Model):
+    name = models.CharField(max_length=255)
+    type = models.ForeignKey(DataType, on_delete=models.RESTRICT)
+    description = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'form_field'
+        verbose_name_plural = "Form Fields"
+        
+    def __str__(self):
+        return f"{self.name} ({self.type})"
+
+class FormFieldLocalization(models.Model):
+    """
+    Represents localized metadata for form field.
+    
+    Attributes:
+        - field (ForeignKey): A reference to the Filter object.
+        - language (CharField): The language code (e.g., "en", "de").
+        - title (CharField): Localized title of the filter.
+        - description (TextField): Localized description of the filter.
+    """
+    field = models.ForeignKey(
+        FormField, on_delete=models.RESTRICT
+    )
+    language = models.ForeignKey(Language, on_delete=models.RESTRICT)
+    title = models.CharField(max_length=255, help_text="Localized title of the filter.")
+    description = models.TextField(blank=True, null=True, help_text="Localized description of the filter.")
+    placeholder = models.CharField(max_length=255, default='Select')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = "form_field_localization"
+        unique_together = ("field", "language")
+        verbose_name = "Form Field Localization"
+        verbose_name_plural = "Form Field Localizations"
+
+    def __str__(self):
+        return f"{self.title} ({self.language.name})"
+
+class FeedbackForm(models.Model):
+    name = models.CharField(max_length=255, help_text="Name of the feedback form")
+    description = models.TextField(null=True, blank=True, help_text="Description of the form")
+    is_active = models.BooleanField(default=True, help_text="Indicates if the filter item is currently active.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = "feedback_form"
+        verbose_name = "Feedback Form"
+        verbose_name_plural = "Feedback Forms"
+
+    def __str__(self):
+        return self.name
+
+class FeedbackFormFieldItem(models.Model):
+    field = models.ForeignKey(
+        FormField, on_delete=models.RESTRICT
+    )
+    item_key = models.CharField(max_length=255, help_text="Value for the option")
+    is_active = models.BooleanField(default=True, help_text="Indicates if the filter item is currently active.")
+    color = models.CharField(max_length=255, help_text="hex color code of the item", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    field_order = models.ForeignKey(FieldOrder, on_delete=models.RESTRICT)
+    description = models.TextField(blank=True, null=True)
+
+
+    class Meta:
+        db_table = "feedback_form_field_item"
+        verbose_name = "Feedback Form Field Item"
+        verbose_name_plural = "Feedback Form Field Items"
+
+    def __str__(self):
+        return f"{self.item_key} ({self.field.name})"
+
+class FeedbackFormFieldItemLocalization(models.Model):
+    """
+    Represents localized metadata for filters.
+    
+    Attributes:
+        - field_item (ForeignKey): A reference to the Filter object.
+        - language (CharField): The language code (e.g., "en", "de").
+        - title (CharField): Localized title of the filter.
+        - description (TextField): Localized description of the filter.
+    """
+    field_item = models.ForeignKey(
+        FeedbackFormFieldItem, on_delete=models.RESTRICT
+    )
+    language = models.ForeignKey(Language, on_delete=models.RESTRICT)
+    title = models.CharField(max_length=255, help_text="Localized title of the filter.")
+    description = models.TextField(blank=True, null=True, help_text="Localized description of the filter.")
+    color = models.CharField(max_length=255, help_text="hex color code of the item", null=True, blank=True)
+    placeholder = models.CharField(max_length=255, default='Select')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+    class Meta:
+        db_table = "feedback_form_field_item_localization"
+        unique_together = ("field_item", "language")
+        verbose_name = "Feedback Form Field Item Localization"
+        verbose_name_plural = "Feedback Form Field Items Localizations"
+
+    def __str__(self):
+        return f"{self.title} ({self.language.name})"
+
+class FeedbackFormField(models.Model):
+    form = models.ForeignKey(FeedbackForm, on_delete=models.RESTRICT)
+    form_field = models.ForeignKey(FormField, on_delete=models.RESTRICT)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    is_hidden = models.BooleanField(default=False)
+    field_order = models.ForeignKey(FieldOrder, models.RESTRICT)
+    description = models.TextField(null=True, blank=True)
+    dependency = models.JSONField(
+        null=True, blank=True, help_text="Conditions for showing this field"
+    )
+    
+    class Meta:
+        db_table = "feedback_form_field"
+        verbose_name = "Feedback Form Field"
+        verbose_name_plural = "Feedback Form Fields"
+        unique_together = ("form", "form_field")
+
+    def __str__(self):
+        return f"{self.form_field.name} ({self.form.name})"
+    
+class TenantFeedbackForm(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.RESTRICT)
+    feedback_form = models.ForeignKey(FeedbackForm, on_delete=models.RESTRICT) 
+    is_active = models.BooleanField(default=True, help_text="Indicates if the filter item is currently active.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    description = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        db_table = 'tenant_feedback_form'
+        verbose_name_plural = "Tenant Feedback Form"
+        
+    def __str__(self):
+        return f"{self.tenant}: {self.feedback_form}"

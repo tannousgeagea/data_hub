@@ -1,0 +1,133 @@
+<!-- metadata/templates/registration/login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        /* Basic reset and body styling */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f4f8;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 40px;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .login-container h2 {
+            font-size: 24px;
+            color: #34495e;
+            margin-bottom: 20px;
+        }
+
+        /* Label and input field styling */
+        label {
+            display: block;
+            text-align: left;
+            margin-top: 15px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+
+        /* Button styling */
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        /* Error message styling */
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        /* Optional link styling */
+        .forgot-password {
+            display: block;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #3498db;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .forgot-password:hover {
+            color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Login to Your Account</h2>
+
+        {% if form.errors %}
+            <p class="error-message">Invalid username or password</p>
+        {% endif %}
+
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            <label for="username">Username</label>
+            <input type="text" name="username" id="username" required>
+
+            <label for="password">Password</label>
+            <input type="password" name="password" id="password" required>
+
+            <button type="submit">Login</button>
+        </form>
+
+        <!-- Optional "Forgot password?" link -->
+        <a href="{% url 'password_reset' %}" class="forgot-password">Forgot password?</a>
+    </div>
+</body>
+</html>

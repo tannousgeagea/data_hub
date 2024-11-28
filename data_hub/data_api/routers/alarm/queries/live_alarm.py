@@ -144,7 +144,7 @@ def get_alarm_notification(
         lookup_filters = Q()
         lookup_filters &= Q(ack_status=False)
         lookup_filters &= Q(tenant=tenant)
-        lookup_filters &= Q(("severity", Severity.objects.filter(level__gte=severity_level).first()))
+        lookup_filters &= Q(("severity__level__gte", severity_level))
         lookup_filters &= Q(created_at__range=(before, now))
         
         rows = []

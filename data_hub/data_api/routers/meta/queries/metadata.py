@@ -227,7 +227,7 @@ def get_metadata(
                             "value": FilterItemLocalization.objects.get(
                                 language=lang, filter_item=filter_item
                                 ).item_value,
-                        } for filter_item in FilterItem.objects.filter(table_filter=tenant_table_filter.table_filter).order_by('field_order') 
+                        } for filter_item in FilterItem.objects.filter(table_filter=tenant_table_filter.table_filter, is_active=True).order_by('field_order') 
                         if FilterItemLocalization.objects.filter(language=lang, filter_item=filter_item).exists()
                     ]
                 }

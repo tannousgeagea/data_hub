@@ -153,6 +153,11 @@ class Alarm(models.Model):
     delivery_id = models.CharField(max_length=255, null=True, blank=True)
     ack_status = models.BooleanField(default=False)
     
+    # Feedback-related fields
+    feedback_provided = models.BooleanField(default=False)
+    is_actual_alarm = models.BooleanField(null=True, blank=True)
+    exclude_from_dashboard = models.BooleanField(default=False)
+    
     class Meta:
         db_table = 'alarm'
         verbose_name_plural = 'Alarms'
@@ -188,3 +193,29 @@ class DeliveryERPAttachment(models.Model):
 
     def __str__(self):
         return f"{self.delivery.delivery_id}: {self.attachment_type.name}"
+
+
+class AlarmFeedback(models.Model):
+    alarm = models.ForeignKey(
+        Alarm, on_delete=models.RESTRICT
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    user_id = models.CharField(max_length=255, null=True, blank=True)
+    is_actual_alarm = models.BooleanField()
+    comment = models.CharField(max_length=255, null=True, blank=True)
+    rating = models.ForeignKey(
+        Severity,
+        on_delete=models.RESTRICT,
+        null=True,
+        blank=True,
+    )
+    meta_info = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'alarm_feedback'
+        verbose_name = 'Alarm Feedback'
+        verbose_name_plural = 'Alarm Feedbacks'
+
+    def __str__(self):
+        return f"Feedback for Alarm {self.alarm.event_uid}"

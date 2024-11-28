@@ -376,6 +376,41 @@ UNFOLD = {
                             "admin:metadata_attachmentacquisitionconfiguration_changelist"
                         ),
                     },
+                    {
+                        "title": _("Feedback Forms"),
+                        "icon": "feedback",
+                        "link": reverse_lazy(
+                            "admin:metadata_feedbackform_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Form Fields"),
+                        "icon": "input",
+                        "link": reverse_lazy(
+                            "admin:metadata_formfield_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Feedback Form Fields"),
+                        "icon": "description",
+                        "link": reverse_lazy(
+                            "admin:metadata_feedbackformfield_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Feedback Form Field Items"),
+                        "icon": "widgets",
+                        "link": reverse_lazy(
+                            "admin:metadata_feedbackformfielditem_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Tenant Feedback Forms"),
+                        "icon": "account_tree",
+                        "link": reverse_lazy(
+                            "admin:metadata_tenantfeedbackform_changelist"
+                        ),
+                    },
                 ],
             },
             {

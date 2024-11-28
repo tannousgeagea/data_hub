@@ -291,10 +291,13 @@ def get_alarm_data(
                 "event_date": alarm.created_at.strftime('%Y-%m-%d'),
                 "start_time": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
                 "end_time": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
+                "timestamp": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
                 "location": plant_entity_localization.title,
                 "event_name": flag_type_localization.title,
                 "severity_level": alarm.severity.unicode_char,
                 "preview": f"{media.media.media_url}?{AzAccoutKey}",
+                "ack_status": "✅" if alarm.ack_status else "⬛",
+                "severity_level_numerical": int(alarm.severity.level),
                 }
                 
             rows.append(

@@ -22,6 +22,11 @@ from .models import (
 )
 
 
+from .models import (
+    FormField, FormFieldLocalization, FeedbackForm, FeedbackFormField, FeedbackFormFieldItem,
+    FeedbackFormFieldItemLocalization, TenantFeedbackForm,
+)
+
 class TableFieldLocalizationInline(TabularInline):
     model = TableFieldLocalization
     extra = 1
@@ -197,3 +202,74 @@ class AttachmentAcquisitionConfigurationAdmin(ModelAdmin):
     search_fields = ('tenant__tenant_name', 'attachment_type__name', 'method__name')
     list_filter = ('created_at',)
     ordering = ('-created_at',)
+    
+    
+#######################################################################################
+############################### Feedback ##############################################
+# Inline for FormFieldLocalization
+class FormFieldLocalizationInline(TabularInline):
+    model = FormFieldLocalization
+    extra = 1
+    fields = ('language', 'title', 'description', 'placeholder')
+    verbose_name_plural = "Localizations"
+
+# Inline for FeedbackFormField
+class FeedbackFormFieldInline(TabularInline):
+    model = FeedbackFormField
+    extra = 1
+    fields = ('form_field', 'is_active', 'is_hidden', 'field_order', 'dependency', 'description')
+    verbose_name_plural = "Fields in Form"
+    
+
+class FormFieldLocalizationInline(TabularInline):
+    model = FormFieldLocalization
+    extra = 1
+    fields = ('language', 'title', 'description', 'placeholder')
+    verbose_name_plural = "Field Localizations"
+
+# Inline for FeedbackFormFieldItem
+class FeedbackFormFieldItemInline(TabularInline):
+    model = FeedbackFormFieldItem
+    extra = 1
+    fields = ('item_key', 'is_active', 'field_order', 'description')
+    verbose_name_plural = "Field Items"
+
+# Inline for FeedbackFormFieldItemLocalization
+class FeedbackFormFieldItemLocalizationInline(TabularInline):
+    model = FeedbackFormFieldItemLocalization
+    extra = 1
+    fields = ('language', 'title', 'color', 'description')
+    verbose_name_plural = "Item Localizations"
+
+# Admin for FeedbackForm
+@admin.register(FormField)
+class FormFieldAdmin(ModelAdmin):
+    list_display = ('name', 'type', 'description', 'created_at')
+    search_fields = ('name',)
+    inlines = [FormFieldLocalizationInline, FeedbackFormFieldItemInline]
+
+@admin.register(FeedbackForm)
+class FeedbackFormAdmin(ModelAdmin):
+    list_display = ('name', 'is_active', 'description', 'created_at')
+    search_fields = ('name',)
+    inlines = [FeedbackFormFieldInline]
+
+@admin.register(FeedbackFormField)
+class FeedbackFormFieldAdmin(ModelAdmin):
+    list_display = ('form', 'form_field', 'is_active', 'is_hidden', 'field_order', 'created_at')
+    search_fields = ('form__name', 'form_field__name')
+    list_filter = ('is_active', 'is_hidden')
+    inlines = []
+
+@admin.register(FeedbackFormFieldItem)
+class FeedbackFormFieldItemAdmin(ModelAdmin):
+    list_display = ('field', 'item_key', 'is_active', 'field_order', 'created_at')
+    search_fields = ('field__name', 'item_key')
+    list_filter = ('is_active',)
+    inlines = [FeedbackFormFieldItemLocalizationInline]
+
+@admin.register(TenantFeedbackForm)
+class TenantFeedbackFormAdmin(ModelAdmin):
+    list_display = ('tenant', 'feedback_form', 'is_active', 'created_at')
+    search_fields = ('tenant__name', 'feedback_form__name')
+    list_filter = ('is_active',)

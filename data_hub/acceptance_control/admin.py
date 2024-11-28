@@ -12,6 +12,7 @@ from .models import (
     Alarm,
     AlarmMedia,
     DeliveryERPAttachment,
+    AlarmFeedback,
 )
 
 # Admin for Media Model
@@ -105,3 +106,26 @@ class DeliveryERPAttachmentAdmin(ModelAdmin):
     search_fields = ('delivery__delivery_id', 'attachment_type__name', 'source_reference')
     list_filter = ('attachment_type', 'fetched_at', 'created_at')
     ordering = ('-created_at',)
+    
+    
+@admin.register(AlarmFeedback)
+class AlarmFeedbackAdmin(ModelAdmin):
+    # List view configuration
+    list_display = (
+        'alarm',
+        'is_actual_alarm',
+        'rating',
+        'user_id',
+        'created_at',
+        'updated_at',
+    )
+    list_filter = (
+        'is_actual_alarm',
+        'rating',
+        'created_at',
+    )
+    search_fields = (
+        'alarm__event_uid',
+        'user_id',
+        'comment',
+    )
