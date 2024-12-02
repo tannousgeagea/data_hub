@@ -1,7 +1,8 @@
 from django.db import models
 from tenants.models import (
     Tenant,
-    PlantEntity
+    PlantEntity,
+    SensorBox,
 )
 
 from metadata.models import (
@@ -19,6 +20,7 @@ class Media(models.Model):
     ]
     
     media_id = models.CharField(max_length=255, unique=True, db_index=True)
+    sensor_box = models.ForeignKey(SensorBox, on_delete=models.RESTRICT, null=True, blank=True)
     media_name = models.CharField(max_length=255)
     media_type = models.CharField(max_length=100, choices=MEDIA_TYPE_CHOICES)
     media_url = models.CharField(max_length=255)
@@ -32,7 +34,7 @@ class Media(models.Model):
         verbose_name_plural = 'Media'
         
     def __str__(self):
-        return f"{self.media_name} ({self.media_type})"
+        return f"{self.media_id} ({self.media_type})"
 
 class Delivery(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.RESTRICT)

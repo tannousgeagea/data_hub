@@ -70,6 +70,23 @@ class PlantEntity(models.Model):
     def __str__(self):
         return f'Entity {self.entity_uid} in {self.entity_type.tenant.tenant_name}'
 
+class SensorBox(models.Model):
+    plant_entity = models.ForeignKey(PlantEntity, on_delete=models.RESTRICT)
+    sensor_box_name = models.CharField(max_length=255)
+    sensor_box_location = models.CharField(max_length=255)  # E.g., 'front', 'top', 'bunker'
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    meta_info = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'sensor_box'
+        unique_together = ('plant_entity', 'sensor_box_name')
+        verbose_name_plural = 'Sensor Boxes'
+
+    def __str__(self):
+        return f"{self.sensor_box_name} at {self.sensor_box_location} ({self.plant_entity})"
+
+
 class TenantStorageSettings(models.Model):
     tenant = models.OneToOneField(Tenant, on_delete=models.RESTRICT, related_name='storage_settings')
     provider_name = models.CharField(max_length=100, choices=[('azure', 'Azure'), ('aws', 'AWS'), ('gcp', 'GCP')])

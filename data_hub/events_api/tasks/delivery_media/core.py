@@ -5,6 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from celery import shared_task
 from datetime import datetime, timezone
 from acceptance_control.models import Delivery, Media, DeliveryMedia
+from tenants.models import SensorBox
 
 @shared_task(bind=True,autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}, ignore_result=True,
              name='delivery_media:execute')
@@ -18,11 +19,16 @@ def execute(self, payload, **kwargs):
 
             
         delivery = Delivery.objects.get(delivery_id=payload.delivery_id)
+        sensor_box = SensorBox.objects.filter(
+                plant_entity=delivery.entity,
+                sensor_box_location=payload.sensor_box_location
+            )   
         media = Media(
             media_id=payload.media_id,
             media_name=payload.media_name,
             media_url=payload.media_url,
             media_type=payload.media_type,
+            sensor_box=sensor_box.first() if sensor_box else None,
         )
         media.save()
         

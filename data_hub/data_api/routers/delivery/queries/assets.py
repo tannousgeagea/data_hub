@@ -40,13 +40,18 @@ from tenants.models import (
     TenantStorageSettings,
 )
 
+assets_order = {
+    "front": 0,
+    "bunker": 1,
+}
+
 def map_item_assets(delivery_id, item):
     try:
         if "delivery" in item.key:
             return DeliveryMedia.objects.filter(
                 delivery__delivery_id=delivery_id, 
                 media__media_type=item.media_type
-                )
+                ).order_by('media__sensor_box__order')
         if "impurity" in item.key:
             return AlarmMedia.objects.filter(
                 alarm__delivery_id=delivery_id, 
@@ -193,24 +198,24 @@ def get_delivery_assets(response: Response, delivery_id:str):
             for item in table_asset_items:
                 medias = map_item_assets(delivery_id=delivery_id, item=item)
                 
-                if len(medias) >= 2 and "delivery" in item.key and item.media_type == "video":
-                    for i, media_model in enumerate(medias):
-                        items.append(
-                            {
-                                'key': f'{item.key}_{str(i + 1)}',
-                                'title': f'{str(i + 1)} - {TableAssetItemLocalization.objects.get(asset_item=item, language=language).title}' if TableAssetItemLocalization.objects.filter(asset_item=item, language=language) else item.name,
-                                'type': item.media_type,
-                                'data': [
-                                    {
-                                        'url': f"{media_model.media.media_url}?{AzAccoutKey}",
-                                        'name': media_model.media.media_name,
-                                        'time': media_model.media.created_at.strftime(DATETIME_FORMAT),
-                                    }
-                                ]
-                            }
-                        )
+                # if len(medias) >= 2 and "delivery" in item.key and item.media_type == "video":
+                #     for i, media_model in enumerate(medias):
+                #         items.append(
+                #             {
+                #                 'key': f'{item.key}_{str(i + 1)}',
+                #                 'title': f'{str(i + 1)} - {TableAssetItemLocalization.objects.get(asset_item=item, language=language).title}' if TableAssetItemLocalization.objects.filter(asset_item=item, language=language) else item.name,
+                #                 'type': item.media_type,
+                #                 'data': [
+                #                     {
+                #                         'url': f"{media_model.media.media_url}?{AzAccoutKey}",
+                #                         'name': media_model.media.media_name,
+                #                         'time': media_model.media.created_at.strftime(DATETIME_FORMAT),
+                #                     }
+                #                 ]
+                #             }
+                #         )
                     
-                    continue
+                #     continue
                 
                 items.append(
                     {

@@ -2,7 +2,10 @@ from django.contrib import admin
 from unfold.admin import ModelAdmin, TabularInline, StackedInline
 from tenants.models import Tenant, EntityType, PlantEntity
 from metadata.models import PlantEntityLocalization
-from .models import TenantStorageSettings
+from .models import (
+    SensorBox,
+    TenantStorageSettings,
+)
 
 
 class PlantEntityLocalizationInline(TabularInline):  # or StackedInline
@@ -18,10 +21,15 @@ class EntityTypeInline(TabularInline):
 class PlantEntityInline(TabularInline):
     model = PlantEntity
     extra = 1
-    
+
+class SensorBoxInline(TabularInline):
+    model = SensorBox
+    extra = 1
+
 class TenantStorageSettingsInline(TabularInline):
     model = TenantStorageSettings
     extra = 1
+    
     
 # Register your models here.
 @admin.register(Tenant)
@@ -55,7 +63,16 @@ class PlantEntityAdmin(ModelAdmin):
     list_filter = ('entity_type', 'created_At')  # Add filters for entity type and creation date
     ordering = ('-created_At',)  # Order by creation date, newest first
     readonly_fields = ('created_At',)  # Make created_At field read-only    
-    inlines = [PlantEntityLocalizationInline]
+    inlines = [PlantEntityLocalizationInline, SensorBoxInline]
+    
+@admin.register(SensorBox)
+class SensorBoxAdmin(ModelAdmin):
+    """
+    Admin interface for the PlantEntity model.
+    """
+    list_display = ("plant_entity", "sensor_box_name", 'sensor_box_location', 'created_at')
+    list_filter = ('plant_entity', 'created_at',)
+    search_fields = ('sensor_box_location', )
     
 @admin.register(TenantStorageSettings)
 class TenantStorageSettingsAdmin(ModelAdmin):

@@ -63,16 +63,13 @@ description = """
         Attach metadata to enrich feedback (meta_info).
 
     Parameters:
-        Path Parameter:
-
-        . event_uid (string, required):
-            A unique identifier for the alarm. Must not be null.
 
         Request Body:
 
         A JSON object with the following optional fields:
         Field	            Type	Required	                Description
         ----------------------------------------------------------------------------------------------------------------------------
+        event_uid           string      Yes                     A unique identifier for the alarm. Must not be null.
         user_id	            string	    No	                    Identifier of the user providing feedback.
         comment	            string	    No	                    Optional comment to explain the feedback.
         rating	            integer	    No	                    Severity rating for the alarm. Must align with the alarm's flag type.
@@ -113,6 +110,7 @@ description = """
 
 """
 class Request(BaseModel):
+    event_uid:str
     user_id:Optional[str] = None
     comment:Optional[str] = None
     rating:Optional[int] = None
@@ -120,13 +118,13 @@ class Request(BaseModel):
     is_actual_alarm:Optional[bool] = None
 
 @router.api_route(
-    "/feedback/alarm/{event_uid}", methods=["POST"], tags=["Feedback"], description=description,
+    "/feedback/alarm", methods=["POST"], tags=["Feedback"], description=description,
 )
-def insert_feedback(response: Response, event_uid:str, request:Request = Body()):
+def insert_feedback(response: Response, request:Request = Body()):
     results = {}
     try:
         
-        exists = False
+        event_uid = request.event_uid
         if event_uid == 'null':
             results['error'] = {
                 'status_code': "bad-request",

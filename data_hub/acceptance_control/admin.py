@@ -1,5 +1,5 @@
 from django.contrib import admin
-from unfold.admin import ModelAdmin
+from unfold.admin import ModelAdmin, TabularInline
 from .models import (
     Media, 
     Delivery, 
@@ -15,6 +15,35 @@ from .models import (
     AlarmFeedback,
 )
 
+from django.contrib.admin import SimpleListFilter
+from django.db.models import Count
+
+class DuplicateEventUIDFilter(SimpleListFilter):
+    title = "Duplicate Event UID"  # Display name in the admin filter sidebar
+    parameter_name = "duplicate_event_uid"  # URL query parameter name
+
+    def lookups(self, request, model_admin):
+        return [
+            ("duplicates", "Has Duplicates"),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value() == "duplicates":
+            # Filter objects where event_uid appears more than once
+            duplicates = (
+                queryset.values("event_uid")
+                .annotate(count=Count("event_uid"))
+                .filter(count__gt=1)
+                .values_list("event_uid", flat=True)
+            )
+            return queryset.filter(event_uid__in=duplicates)
+        return queryset
+
+
+class MediaInline(TabularInline):
+    model = Media
+    extra = 1
+
 # Admin for Media Model
 @admin.register(Media)
 class MediaAdmin(ModelAdmin):
@@ -22,11 +51,6 @@ class MediaAdmin(ModelAdmin):
     search_fields = ('media_name', 'media_id', 'media_type')
     list_filter = ('media_type', 'created_at')
     readonly_fields = ('created_at',)
-    fieldsets = (
-        ('Basic Info', {'fields': ('media_id', 'media_name', 'media_type', 'media_url')}),
-        ('Additional Info', {'fields': ('file_size', 'duration', 'meta_info')}),
-        ('Timestamps', {'fields': ('created_at',)}),
-    )
 
 # Admin for Delivery Model
 @admin.register(Delivery)
@@ -40,6 +64,7 @@ class DeliveryAdmin(ModelAdmin):
         ('Time Info', {'fields': ('delivery_start', 'delivery_end')}),
         ('Timestamps', {'fields': ('created_at',)}),
     )
+
 
 # Admin for Delivery Media Model
 @admin.register(DeliveryMedia)
@@ -86,7 +111,7 @@ class TenantFlagDeploymentAdmin(ModelAdmin):
 class AlarmAdmin(ModelAdmin):
     list_display = ('tenant', "entity", "flag_type", "severity", "delivery_id", "created_at")
     search_fields = ("event_uid", "delivery_id")
-    list_filter = ('tenant__tenant_name', "flag_type__name", "entity__entity_uid", "created_at")
+    list_filter = ('tenant__tenant_name', "flag_type__name", "entity__entity_uid", "created_at", DuplicateEventUIDFilter)
     
 @admin.register(AlarmMedia)
 class AlarmMediaAdmin(ModelAdmin):

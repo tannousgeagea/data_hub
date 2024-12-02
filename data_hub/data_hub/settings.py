@@ -196,6 +196,13 @@ UNFOLD = {
                             "admin:tenants_plantentity_changelist"
                         ),
                     },
+                    {
+                        "title": _("SensorBoxes"),
+                        "icon": 'sensors',
+                        "link": reverse_lazy(
+                            "admin:tenants_sensorbox_changelist"
+                        ),
+                    },
                 ]
             },
             {
