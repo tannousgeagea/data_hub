@@ -220,6 +220,7 @@ def get_metadata(
                     "title": localization.title,
                     "type": tenant_table_filter.table_filter.type,
                     "description": localization.description,
+                    "default": tenant_table_filter.default,
                     "placeholder": localization.placeholder,
                     "items": [
                         {

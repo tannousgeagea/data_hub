@@ -47,6 +47,12 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
+is_actual_alarm_map = {
+    "false": False,
+    "true": True,
+}
+
 description = """
 
     Endpoint: POST /alarm/feedback/{event_uid}
@@ -144,6 +150,8 @@ def insert_feedback(response: Response, request:Request = Body()):
             return results
         
         alarm = Alarm.objects.get(event_uid=event_uid)
+        if request.is_actual_alarm in is_actual_alarm_map.keys():
+            request.is_actual_alarm = is_actual_alarm_map[request.is_actual_alarm]
         
         user_id = request.user_id
         if not AlarmFeedback.objects.filter(alarm=alarm, user_id=user_id).exists():
@@ -189,6 +197,7 @@ def insert_feedback(response: Response, request:Request = Body()):
         alarm_feedback.updated_at = datetime.now(tz=timezone.utc)
         alarm_feedback.save()
         
+        alarm.severity = severity if request.rating else alarm.severity
         alarm.feedback_provided = True
         alarm.exclude_from_dashboard = not alarm.is_actual_alarm
         alarm.save()

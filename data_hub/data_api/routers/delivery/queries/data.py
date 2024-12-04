@@ -63,11 +63,11 @@ def filter_mapping(key, value, tenant):
             return None
         
         if key == "severity_level":
-            return ("severity", Severity.objects.filter(level=value).first())
+            return ("flags__severity", Severity.objects.filter(level=value).first())
         if key == "location":
             return ("entity", PlantEntity.objects.get(entity_uid=value, entity_type__tenant=tenant))
         if key == "flag_type":
-            return ("flag_type", FlagType.objects.get(name=value))
+            return ("flags__flag_type", FlagType.objects.get(name=value))
     except Exception as err:
         raise ValueError(f"Failed to map filter value {value} filter {key}: {err}")
 

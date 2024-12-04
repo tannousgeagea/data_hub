@@ -54,6 +54,9 @@ def filter_mapping(key, value, tenant):
         if value is None:
             return None
         
+        if not len(value):
+            return None
+        
         if value == "all":
             return None
         
@@ -91,7 +94,7 @@ def create_filter_model(fields: Dict[str, Optional[str]]):
     This function creates a dynamic Pydantic model based on the fields provided,
     without setting default values.
     """
-    return create_model("DynamicFilterModel", **{k: (Optional[str], None) for k in fields})
+    return create_model("DynamicFilterModel", **{k: (Optional[str], v) for k, v in fields.items()})
 
 description = """
     URL Path: /alarm
@@ -211,7 +214,7 @@ def get_alarm_data(
         )
         
         filter_fields = {
-            fil.table_filter.filter_name: '' for fil in tenant_table_filter
+            fil.table_filter.filter_name: fil.default for fil in tenant_table_filter
         }
         
         
@@ -229,6 +232,7 @@ def get_alarm_data(
 
         lookup_filters = Q()
         lookup_filters &= Q(tenant=tenant)
+        lookup_filters &= Q(exclude_from_dashboard=False)
         lookup_filters &= Q(created_at__range=(from_date, to_date ))
         for key, value in validated_filters:
             filter_map = filter_mapping(key, value, tenant)
@@ -311,6 +315,7 @@ def get_alarm_data(
             "type": "collection",
             "total_record": total_record,
             "user_filters": lookup_filters.children,
+            "validated_filters": validated_filters,
             "pages": math.ceil(total_record / items_per_page),
             "items": rows,
         }

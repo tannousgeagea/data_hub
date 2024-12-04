@@ -298,9 +298,10 @@ class FilterItemLocalization(models.Model):
 
 class TenantTableFilter(models.Model):
     table_filter = models.ForeignKey(TableFilter, on_delete=models.RESTRICT,)
-    tenant_table = models.ForeignKey(TenantTable, on_delete=models.RESTRICT, )
+    tenant_table = models.ForeignKey(TenantTable, on_delete=models.RESTRICT,)
     is_active = models.BooleanField(default=True, help_text="Indicates if the filter item is currently active.")
     field_order = models.ForeignKey(FieldOrder, on_delete=models.RESTRICT,)
+    default = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     description = models.TextField(blank=True, null=True)
     
