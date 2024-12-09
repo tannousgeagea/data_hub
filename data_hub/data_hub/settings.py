@@ -474,6 +474,13 @@ UNFOLD = {
                         ),
                     },
                     {
+                        "title": _("Alarm Attributes"),
+                        "icon": "edit_attributes",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_alarmattr_changelist"
+                        ),
+                    },
+                    {
                         "title": _("Media"),
                         "icon": "play_arrow",
                         "link": reverse_lazy(

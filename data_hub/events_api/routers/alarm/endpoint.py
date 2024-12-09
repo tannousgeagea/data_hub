@@ -51,6 +51,7 @@ class AlarmRequest(BaseModel):
     severity_level:int
     timestamp:datetime
     delivery_id:str=None
+    meta_info:Dict=None
 
 class AlarmMediaRequest(BaseModel):
     event_uid:str

@@ -59,6 +59,7 @@ def execute(self, payload, **kwargs):
             timestamp=payload.timestamp.replace(tzinfo=timezone.utc),
             event_uid=payload.event_uid,
             delivery_id=payload.delivery_id,
+            meta_info=payload.meta_info if payload.meta_info else None,
         )
         
         alarm.save()

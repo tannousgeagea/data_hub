@@ -13,6 +13,7 @@ from .models import (
     AlarmMedia,
     DeliveryERPAttachment,
     AlarmFeedback,
+    AlarmAttr,
 )
 
 from django.contrib.admin import SimpleListFilter
@@ -113,6 +114,11 @@ class AlarmAdmin(ModelAdmin):
     search_fields = ("event_uid", "delivery_id")
     list_filter = ('tenant__tenant_name', "flag_type__name", "entity__entity_uid", "created_at", DuplicateEventUIDFilter)
     
+@admin.register(AlarmAttr)
+class AlarmAttrAdmin(ModelAdmin):
+    list_display = ("alarm", "key", "value")
+    search_fields = ("alarm__event_uid", "key")
+
 @admin.register(AlarmMedia)
 class AlarmMediaAdmin(ModelAdmin):
     list_display = ("alarm", "media", "show_created_at")
