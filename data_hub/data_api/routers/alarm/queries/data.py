@@ -61,7 +61,7 @@ def filter_mapping(key, value, tenant):
             return None
         
         if key == "severity_level":
-            return ("severity", Severity.objects.filter(level=value).first())
+            return ("severity__gte", Severity.objects.filter(level=value).first())
         if key == "location":
             return ("entity", PlantEntity.objects.get(entity_uid=value, entity_type__tenant=tenant))
         if key == "flag_type":

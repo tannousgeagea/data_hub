@@ -7,6 +7,7 @@ from tenants.models import (
 
 from metadata.models import (
     Language,
+    DataType,
     ERPDataType,
     AttachmentAcquisitionConfiguration,
 )
@@ -160,13 +161,30 @@ class Alarm(models.Model):
     is_actual_alarm = models.BooleanField(null=True, blank=True)
     exclude_from_dashboard = models.BooleanField(default=False)
     
+    # Extra Info
+    value = models.CharField(max_length=255, null=True, blank=True)
+    meta_info = models.JSONField(null=True, blank=True)
+    
     class Meta:
         db_table = 'alarm'
         verbose_name_plural = 'Alarms'
         
     def __str__(self):
         return f"Alarm {self.event_uid} for {self.tenant}"
-    
+
+class AlarmAttr(models.Model):
+    alarm = models.ForeignKey(Alarm, related_name="alarm_attr", on_delete=models.RESTRICT)
+    key = models.CharField(max_length=255)
+    value = models.CharField(max_length=255)
+    data_type = models.ForeignKey(DataType, on_delete=models.RESTRICT)
+
+    class Meta:
+        db_table = 'alarm_attr'
+        verbose_name_plural = 'Alarm Attribute'
+
+    def __str__(self):
+        return f"{self.key}: {self.value} ({self.data_type})"
+
 class AlarmMedia(models.Model):
     alarm = models.ForeignKey(Alarm, on_delete=models.RESTRICT)
     media = models.ForeignKey(Media, on_delete=models.RESTRICT)
