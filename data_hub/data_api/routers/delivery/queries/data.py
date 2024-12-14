@@ -274,6 +274,11 @@ def get_delivery_data(
                     continue
                 
                 flag = flags.first()
+                
+                for flag_ in flags:
+                    if flag_.severity.level > flag.severity.level:
+                            flag = flag_
+                            
                 row.update(
                     {
                         flag.flag_type.name: flag.severity.unicode_char
