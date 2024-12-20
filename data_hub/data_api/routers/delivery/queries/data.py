@@ -239,7 +239,17 @@ def get_delivery_data(
                 lookup_filters &= Q(filter_map) 
         
         language = Language.objects.get(code='de')
-        deliveries = Delivery.objects.filter(lookup_filters).order_by('-created_at')
+        deliveries = Delivery.objects.filter(lookup_filters).order_by('-created_at').distinct()
+        
+        filtered_deliveries =  []
+        for delivery in deliveries:
+            if (delivery.delivery_end - delivery.delivery_start).seconds < 30:
+                continue
+            
+            filtered_deliveries.append(delivery)
+
+        deliveries = filtered_deliveries
+
         rows = []
         total_record = len(deliveries)
         for delivery in deliveries[(page - 1) * items_per_page:page * items_per_page]:
@@ -273,12 +283,11 @@ def get_delivery_data(
                     
                     continue
                 
-                flag = flags.first()
-                
+                flag = flags.last()
                 for flag_ in flags:
                     if flag_.severity.level > flag.severity.level:
                             flag = flag_
-                            
+
                 row.update(
                     {
                         flag.flag_type.name: flag.severity.unicode_char

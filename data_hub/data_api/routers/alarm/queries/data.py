@@ -302,6 +302,7 @@ def get_alarm_data(
                 "preview": f"{media.media.media_url}?{AzAccoutKey}",
                 "ack_status": "✅" if alarm.ack_status else "⬛",
                 "severity_level_numerical": int(alarm.severity.level),
+                "feedback_provided": "✅" if alarm.feedback_provided else "⬛",
                 }
                 
             rows.append(
