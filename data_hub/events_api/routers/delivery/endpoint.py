@@ -61,6 +61,7 @@ class DeliveryFlagRequest(BaseModel):
     delivery_id:str
     flag_type:str
     severity_level:str
+    event_uid:Optional[str] = None
 
 router = APIRouter(
     prefix="/api/v1",

@@ -96,7 +96,7 @@ class SeverityAdmin(ModelAdmin):
 # Admin for DeliveryFlag Model
 @admin.register(DeliveryFlag)
 class DeliveryFlagAdmin(ModelAdmin):
-    list_display = ('delivery', 'flag_type', 'severity')
+    list_display = ('delivery', 'flag_type', 'severity', 'feedback_provided', 'is_actual_alarm', 'event_uid')
     search_fields = ('delivery__delivery_id', 'flag_type__name', 'severity__level')
     list_filter = ('flag_type', 'severity')
 

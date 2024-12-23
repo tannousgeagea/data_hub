@@ -4,7 +4,7 @@ from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from celery import shared_task
 from datetime import datetime, timezone
-from acceptance_control.models import Delivery, DeliveryFlag, FlagType, Severity
+from acceptance_control.models import Delivery, DeliveryFlag, FlagType, Severity, Alarm
 
 @shared_task(bind=True,autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}, ignore_result=True,
              name='delivery_flag:execute')
@@ -35,6 +35,7 @@ def execute(self, payload, **kwargs):
             delivery=delivery,
             flag_type=flag_type,
             severity=severity,
+            event_uid=payload.event_uid,
         )
         
         flag.save()

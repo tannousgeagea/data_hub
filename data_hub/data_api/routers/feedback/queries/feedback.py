@@ -24,6 +24,7 @@ from acceptance_control.models import (
     Alarm,
     AlarmFeedback,
     Severity,
+    DeliveryFlag,
 )
 
 class TimedRoute(APIRoute):
@@ -202,6 +203,15 @@ def insert_feedback(response: Response, request:Request = Body()):
         alarm.exclude_from_dashboard = not alarm.is_actual_alarm
         alarm.save()
         
+        delivery_flag = DeliveryFlag.objects.filter(event_uid=alarm.event_uid)
+        if delivery_flag:
+            delivery_flag = delivery_flag.first()
+            delivery_flag.is_actual_alarm = request.is_actual_alarm
+            delivery_flag.severity = severity if request.rating else alarm.severity
+            delivery_flag.feedback_provided = True
+            delivery_flag.exclude_from_dashboard = not delivery_flag.is_actual_alarm
+            delivery_flag.save()
+            
         results['status_code'] = "ok"
         results["detail"] = "data retrieved successfully"
         results["status_description"] = "OK"

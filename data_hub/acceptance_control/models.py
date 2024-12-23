@@ -122,7 +122,13 @@ class DeliveryFlag(models.Model):
     delivery = models.ForeignKey(Delivery, on_delete=models.RESTRICT, related_name='flags')
     flag_type = models.ForeignKey(FlagType, on_delete=models.RESTRICT)
     severity = models.ForeignKey(Severity, on_delete=models.RESTRICT)
-
+    event_uid = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    
+    # Feedback-related fields
+    feedback_provided = models.BooleanField(default=False)
+    is_actual_alarm = models.BooleanField(null=True, blank=True)
+    exclude_from_dashboard = models.BooleanField(default=False)
+    
     class Meta:
         db_table = "delivery_flag"
         verbose_name_plural = "Delivery Flags"
