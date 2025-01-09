@@ -56,7 +56,8 @@ def map_item_assets(delivery_id, item):
             return AlarmMedia.objects.filter(
                 alarm__delivery_id=delivery_id, 
                 alarm__flag_type__name="impurity", 
-                media__media_type=item.media_type
+                media__media_type=item.media_type,
+                alarm__exclude_from_dashboard=False,
                 )
         else:
             return []

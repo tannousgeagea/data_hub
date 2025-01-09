@@ -267,7 +267,8 @@ def get_delivery_data(
             for flag in flags_deployment:
                 flags = DeliveryFlag.objects.filter(
                     delivery=delivery,
-                    flag_type=flag.flag_type
+                    flag_type=flag.flag_type,
+                    exclude_from_dashboard=False,
                 ).annotate(
                     max_severity=Max('severity__level')
                 ).filter(
