@@ -299,6 +299,7 @@ def get_alarm_data(
                 "location": plant_entity_localization.title,
                 "event_name": flag_type_localization.title,
                 "severity_level": alarm.severity.unicode_char,
+                "value": f"{int(round(alarm.meta_info.get('object_size'), 2) * 100)} cm" if alarm.meta_info and alarm.meta_info.get('object_size') else None,
                 "preview": f"{media.media.media_url}?{AzAccoutKey}",
                 "ack_status": "✅" if alarm.ack_status else "⬛",
                 "severity_level_numerical": int(alarm.severity.level),
