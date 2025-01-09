@@ -123,7 +123,7 @@ description = """
 """
 
 @router.api_route(
-    "/feedback/alarm/{event_uid}", methods=["GET"], tags=["Feedback"], description=description,
+    "/feedback/alarm/out/{event_uid}", methods=["GET"], tags=["Feedback"], description=description,
 )
 def get_feedback(response: Response, event_uid:str):
     results = {}
