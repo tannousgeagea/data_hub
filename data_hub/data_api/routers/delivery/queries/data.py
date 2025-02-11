@@ -242,23 +242,29 @@ def get_delivery_data(
         deliveries = Delivery.objects.filter(lookup_filters).order_by('-created_at').distinct()
         
         filtered_deliveries =  []
+        ongoing = []
         for delivery in deliveries:
-            if (delivery.delivery_end - delivery.delivery_start).seconds < 30:
+            delivery_status = "done"
+            duration = (delivery.delivery_end - delivery.delivery_start).seconds
+            if duration < 3:
+                delivery_status = "ongoing"
+            elif duration <30:
                 continue
             
             filtered_deliveries.append(delivery)
+            ongoing.append(delivery_status)
 
         deliveries = filtered_deliveries
 
         rows = []
         total_record = len(deliveries)
-        for delivery in deliveries[(page - 1) * items_per_page:page * items_per_page]:
+        for i, delivery in enumerate(deliveries[(page - 1) * items_per_page:page * items_per_page]):
             row = {
                 "id": delivery.id,
                 "delivery_id": delivery.delivery_id,
                 "delivery_date": convert_to_local_time(utc_time=delivery.created_at, timezone_str=timezone_str).strftime('%Y-%m-%d'),
                 "start_time": convert_to_local_time(utc_time=delivery.delivery_start, timezone_str=timezone_str).strftime("%H:%M:%S"),
-                "end_time": convert_to_local_time(utc_time=delivery.delivery_end, timezone_str=timezone_str).strftime("%H:%M:%S"),
+                "end_time": convert_to_local_time(utc_time=delivery.delivery_end, timezone_str=timezone_str).strftime("%H:%M:%S") if ongoing[i] == "done" else "-",
                 "location": PlantEntityLocalization.objects.get(plant_entity=delivery.entity, language=language).title if PlantEntityLocalization.objects.filter(plant_entity=delivery.entity, language=language).exists() else delivery.delivery_location,
                 }
 
