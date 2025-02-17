@@ -3,6 +3,7 @@ from tenants.models import (
     Tenant,
     PlantEntity,
     SensorBox,
+    Camera,
 )
 
 from metadata.models import (
@@ -245,3 +246,35 @@ class AlarmFeedback(models.Model):
 
     def __str__(self):
         return f"Feedback for Alarm {self.alarm.event_uid}"
+
+
+#################################################################################################################
+########################################### Video Archive #######################################################
+#################################################################################################################
+class VideoArchive(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.RESTRICT)
+    entity = models.ForeignKey(PlantEntity, on_delete=models.RESTRICT)
+    camera = models.ForeignKey(Camera, on_delete=models.SET_NULL, null=True, blank=True, related_name="videos")
+    video_id = models.CharField(max_length=255, unique=True)
+    start_time = models.DateTimeField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'video_archive'
+        verbose_name = 'Video Archive'
+        verbose_name_plural = "Video Archives"
+
+    def __str__(self) -> str:
+        return f"Video {self.video_id} ({self.start_time} - {self.end_time})"
+
+class VideoArchiveMedia(models.Model):
+    video_archive = models.ForeignKey(VideoArchive, on_delete=models.RESTRICT)
+    media = models.ForeignKey(Media, on_delete=models.RESTRICT)
+    
+    class Meta:
+        db_table = 'video_archive_media'
+        verbose_name_plural = 'Video Archive Media'
+        
+    def __str__(self):
+        return f"{self.video_archive}: {self.media}"

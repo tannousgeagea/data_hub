@@ -86,6 +86,21 @@ class SensorBox(models.Model):
     def __str__(self):
         return f"{self.sensor_box_name} at {self.sensor_box_location} ({self.plant_entity})"
 
+class Camera(models.Model):
+    """Represents an individual camera inside a SensorBox."""
+    sensor_box = models.ForeignKey(SensorBox, on_delete=models.CASCADE, related_name="cameras")
+    camera_id = models.CharField(max_length=255)
+    camera_position = models.CharField(max_length=255)  # e.g., "Front", "Top", "Left", "Right"
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'cameras'
+        unique_together = ('sensor_box', 'camera_id')
+        verbose_name_plural = 'Cameras'
+
+    def __str__(self):
+        return f"Camera {self.camera_id} in {self.sensor_box}"
 
 class TenantStorageSettings(models.Model):
     tenant = models.OneToOneField(Tenant, on_delete=models.RESTRICT, related_name='storage_settings')

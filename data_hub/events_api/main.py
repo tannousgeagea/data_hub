@@ -20,7 +20,8 @@ sys.path.append(str(base_dir))
 
 from events_api.routers import (
     delivery,
-    alarm
+    alarm,
+    video_archive,
 )
 from events_api.config import celery_utils
 
@@ -62,6 +63,7 @@ def create_app() -> FastAPI:
     app.celery_app = celery_utils.create_celery()
     app.include_router(delivery.endpoint.router)
     app.include_router(alarm.endpoint.router)
+    app.include_router(video_archive.endpoint.router)
     
     return app
 

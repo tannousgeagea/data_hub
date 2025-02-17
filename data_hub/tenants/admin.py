@@ -4,6 +4,7 @@ from tenants.models import Tenant, EntityType, PlantEntity
 from metadata.models import PlantEntityLocalization
 from .models import (
     SensorBox,
+    Camera,
     TenantStorageSettings,
 )
 
@@ -30,7 +31,10 @@ class TenantStorageSettingsInline(TabularInline):
     model = TenantStorageSettings
     extra = 1
     
-    
+class CameraInline(TabularInline):
+    model = Camera
+    extra = 1
+
 # Register your models here.
 @admin.register(Tenant)
 class TenantAdmin(ModelAdmin):
@@ -73,7 +77,16 @@ class SensorBoxAdmin(ModelAdmin):
     list_display = ("plant_entity", "sensor_box_name", 'sensor_box_location', 'created_at')
     list_filter = ('plant_entity', 'created_at',)
     search_fields = ('sensor_box_location', )
+    inlines = [CameraInline]
     
+@admin.register(Camera)
+class CameraAdmin(ModelAdmin):
+    """
+    Admin interface for the Camera model.
+    """
+    list_display = ("sensor_box", "camera_id", "camera_position", "is_active")
+    list_filter = ("sensor_box", "is_active")
+
 @admin.register(TenantStorageSettings)
 class TenantStorageSettingsAdmin(ModelAdmin):
     """
@@ -82,4 +95,5 @@ class TenantStorageSettingsAdmin(ModelAdmin):
     list_display = ("tenant", "provider_name", "account_name")
     list_filter = ("tenant", "created_at")
     search_filelds = ("tenant__tenant_name")
+
     

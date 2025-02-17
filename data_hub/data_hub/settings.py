@@ -203,6 +203,13 @@ UNFOLD = {
                             "admin:tenants_sensorbox_changelist"
                         ),
                     },
+                    {
+                        "title": _("Cameras"),
+                        "icon": 'videocam',
+                        "link": reverse_lazy(
+                            "admin:tenants_camera_changelist"
+                        ),
+                    },
                 ]
             },
             {
@@ -506,6 +513,20 @@ UNFOLD = {
                         "icon": "package",
                         "link": reverse_lazy(
                             "admin:acceptance_control_deliveryerpattachment_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Video Archive"),
+                        "icon": "archive",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_videoarchive_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Video Archive Media"),
+                        "icon": "play_arrow",
+                        "link": reverse_lazy(
+                            "admin:acceptance_control_videoarchivemedia_changelist"
                         ),
                     },
                 ]

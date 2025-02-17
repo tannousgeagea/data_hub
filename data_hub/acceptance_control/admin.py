@@ -14,6 +14,8 @@ from .models import (
     DeliveryERPAttachment,
     AlarmFeedback,
     AlarmAttr,
+    VideoArchive,
+    VideoArchiveMedia,
 )
 
 from django.contrib.admin import SimpleListFilter
@@ -160,3 +162,18 @@ class AlarmFeedbackAdmin(ModelAdmin):
         'user_id',
         'comment',
     )
+
+#################################################################################
+######################## Video Archive ##########################################
+#################################################################################
+@admin.register(VideoArchive)
+class VideoArchiveAdmin(ModelAdmin):
+    list_display = ('tenant', "entity", "video_id", "start_time", "end_time")
+    list_filter = ("tenant", "entity", "camera", "created_at")
+    search_fields = ("video_id", )
+
+@admin.register(VideoArchiveMedia)
+class VideoArchiveMediaAdmin(ModelAdmin):
+    list_display = ("video_archive", "media")
+    list_filter = ("video_archive__tenant", "video_archive__entity",)
+    search_fields = ("video_archive__video_id", )
