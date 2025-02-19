@@ -10,7 +10,8 @@ from .models import (
     TableAssetLocalization,
     TableAssetItemLocalization,
     TableAssetItem,
-    TenantTableAsset
+    TenantTableAsset,
+    TenantTableAssetItem,
     )
 
 from .models import (
@@ -149,6 +150,12 @@ class TableAssetItemLocalizationInline(TabularInline):
 class TableAssetItemInline(TabularInline):
     model = TableAssetItem
     extra = 1
+
+class TenantTableAssetItemInline(TabularInline):
+    model = TenantTableAssetItem
+    extra = 1
+    autocomplete_fields = ['asset_item']
+
 @admin.register(TableAsset)
 class TableAssetAdmin(ModelAdmin):
     list_display = ('key', 'is_active', 'is_external', 'created_at')
@@ -166,6 +173,7 @@ class TenantTableAssetAdmin(ModelAdmin):
     list_display = ('tenant_table', 'table_asset', 'is_active', 'field_order', 'created_at')
     list_filter = ('is_active',)
     search_fields = ('table_asset__key', 'tenant_table__name')
+    inlines = [TenantTableAssetItemInline]
     
 ##########################################################################
 ###################### ERP Data ##########################################

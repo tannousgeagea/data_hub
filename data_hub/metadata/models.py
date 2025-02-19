@@ -393,6 +393,21 @@ class TenantTableAsset(models.Model):
     def __str__(self):
         return f"{self.tenant_table}: {self.table_asset.key}"
     
+class TenantTableAssetItem(models.Model):
+    tenant_table_asset = models.ForeignKey(TenantTableAsset, on_delete=models.CASCADE, related_name="tenant_asset_items")
+    asset_item = models.ForeignKey(TableAssetItem, on_delete=models.RESTRICT, related_name="tenant_items")
+    is_active = models.BooleanField(default=True, help_text="Indicates if the asset item is currently active for this tenant.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tenant_table_asset_item'
+        unique_together = ('tenant_table_asset', 'asset_item')
+        verbose_name_plural = "Tenant Table Asset Items"
+
+    def __str__(self):
+        return f"{self.tenant_table_asset.tenant_table}: {self.asset_item.key} ({self.asset_item.media_type})"
+
+        
 ########################################################################################################
 #######################################################################################################
 class ERPDataType(models.Model):

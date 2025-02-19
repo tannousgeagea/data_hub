@@ -31,6 +31,7 @@ from metadata.models import (
     TableAssetLocalization,
     TableAssetItemLocalization,
     TenantTableFilter,
+    TenantTableAssetItem,
 )
 
 from tenants.models import (
@@ -208,8 +209,9 @@ def get_alarm_assets(response: Response, event_uid:str, language:str=None):
             )
             
             items = []
-            table_asset_items = TableAssetItem.objects.filter(asset=table_asset.table_asset, is_active=True)
+            table_asset_items = TenantTableAssetItem.objects.filter(tenant_table_asset=table_asset, is_active=True)
             for item in table_asset_items:
+                item = item.asset_item
                 items.append(
                     {
                         'key': item.key,

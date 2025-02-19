@@ -34,6 +34,7 @@ from metadata.models import (
     TableAssetLocalization,
     TableAssetItemLocalization,
     TenantTableFilter,
+    TenantTableAssetItem,
 )
 
 from tenants.models import (
@@ -195,8 +196,9 @@ def get_delivery_assets(response: Response, delivery_id:str):
             )
             
             items = []
-            table_asset_items = TableAssetItem.objects.filter(asset=table_asset.table_asset, is_active=True)
+            table_asset_items = TenantTableAssetItem.objects.filter(tenant_table_asset=table_asset, is_active=True)
             for item in table_asset_items:
+                item = item.asset_item
                 medias = map_item_assets(delivery_id=delivery_id, item=item)
                 
                 # if len(medias) >= 2 and "delivery" in item.key and item.media_type == "video":
