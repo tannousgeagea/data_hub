@@ -312,7 +312,22 @@ class TenantTableFilter(models.Model):
     def __str__(self):
         return f"{self.tenant_table}: {self.table_filter.filter_name}"
     
-    
+
+class TenantTableFilterItem(models.Model):
+    tenant_table_filter = models.ForeignKey(TenantTableFilter, on_delete=models.CASCADE, related_name="tenant_filter_items")
+    filter_item = models.ForeignKey(FilterItem, on_delete=models.RESTRICT, related_name="tenant_items")
+    is_active = models.BooleanField(default=True, help_text="Indicates if the filter item is currently active for this tenant.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tenant_table_filter_item'
+        unique_together = ('tenant_table_filter', 'filter_item')
+        verbose_name_plural = "Tenant Table Filter Items"
+
+    def __str__(self):
+        return f"{self.tenant_table_filter.tenant_table}: {self.filter_item.item_key} (Filter: {self.tenant_table_filter.table_filter.filter_name})"
+
+
 #############################################################################################################
 ################################## Table Assets #############################################################
 #############################################################################################################

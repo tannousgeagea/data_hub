@@ -4,7 +4,7 @@ from unfold.admin import ModelAdmin, TabularInline, StackedInline
 from .models import (
     Language, TableType, DataType, TableField, TenantTable, FieldOrder,
     TenantTableField, TableFieldLocalization, TableFilter, FilterItem,
-    FilterLocalization, FilterItemLocalization, TenantTableFilter,
+    FilterLocalization, FilterItemLocalization, TenantTableFilter, TenantTableFilterItem,
     PlantEntityLocalization,
     TableAsset, 
     TableAssetLocalization,
@@ -46,6 +46,10 @@ class FilterLocalizationInline(TabularInline):
 
 class FilterItemLocalizationInline(TabularInline):
     model = FilterItemLocalization
+    extra = 1
+
+class TenantTableFilterItemInline(TabularInline):
+    model = TenantTableFilterItem
     extra = 1
 
 @admin.register(Language)
@@ -138,6 +142,14 @@ class TenantTableFilterAdmin(ModelAdmin):
     search_fields = ('tenant_table__tenant__tenant_name', 'table_filter__filter_name')
     ordering = ('-created_at',)
     list_filter = ('tenant_table__tenant__tenant_name', 'table_filter__filter_name')
+    inlines = [TenantTableFilterItemInline]
+
+@admin.register(TenantTableFilterItem)
+class TenantTableFilterItemAdmin(ModelAdmin):
+    list_display = ('tenant_table_filter', 'filter_item', 'is_active', 'created_at')
+    search_fields = ('tenant_table_filter__tenant_table__name', 'filter_item__item_key')
+    list_filter = ('is_active',)
+    autocomplete_fields = ['tenant_table_filter', 'filter_item']
 
 class TableAssetLocalizationInline(TabularInline):
     model = TableAssetLocalization

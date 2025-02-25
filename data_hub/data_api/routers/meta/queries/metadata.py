@@ -33,6 +33,7 @@ from metadata.models import (
     FilterItem,
     FilterItemLocalization,
     TenantTableFilter,
+    TenantTableFilterItem,
 )
 
 class TimedRoute(APIRoute):
@@ -224,12 +225,12 @@ def get_metadata(
                     "placeholder": localization.placeholder,
                     "items": [
                         {
-                            "key": filter_item.item_key,
+                            "key": tenant_table_filter_item.filter_item.item_key,
                             "value": FilterItemLocalization.objects.get(
-                                language=lang, filter_item=filter_item
+                                language=lang, filter_item=tenant_table_filter_item.filter_item
                                 ).item_value,
-                        } for filter_item in FilterItem.objects.filter(table_filter=tenant_table_filter.table_filter, is_active=True).order_by('field_order') 
-                        if FilterItemLocalization.objects.filter(language=lang, filter_item=filter_item).exists()
+                        } for tenant_table_filter_item in TenantTableFilterItem.objects.filter(tenant_table_filter=tenant_table_filter, is_active=True).order_by('filter_item__field_order') 
+                        if FilterItemLocalization.objects.filter(language=lang, filter_item=tenant_table_filter_item.filter_item).exists()
                     ]
                 }
             )
