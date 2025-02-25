@@ -39,11 +39,18 @@ class Media(models.Model):
         return f"{self.media_id} ({self.media_type})"
 
 class Delivery(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('on-going', 'Active'),
+        ('done', 'Done'),
+    ]
+
     tenant = models.ForeignKey(Tenant, on_delete=models.RESTRICT)
     entity = models.ForeignKey(PlantEntity, on_delete=models.RESTRICT)
     delivery_id = models.CharField(max_length=255, unique=True)
     delivery_start = models.DateTimeField()
     delivery_end = models.DateTimeField(null=True, blank=True)
+    delivery_status = models.CharField(max_length=255, default='pending', choices=STATUS_CHOICES)
     delivery_location = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     
