@@ -50,7 +50,7 @@ class Delivery(models.Model):
     delivery_id = models.CharField(max_length=255, unique=True)
     delivery_start = models.DateTimeField()
     delivery_end = models.DateTimeField(null=True, blank=True)
-    delivery_status = models.CharField(max_length=255, default='pending', choices=STATUS_CHOICES)
+    delivery_status = models.CharField(max_length=255, default='pending', choices=STATUS_CHOICES, null=True)
     delivery_location = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     
