@@ -8,6 +8,8 @@ from .models import (
     TenantStorageSettings,
 )
 
+from .utils import create_tenant 
+
 
 class PlantEntityLocalizationInline(TabularInline):  # or StackedInline
     model = PlantEntityLocalization
@@ -29,7 +31,7 @@ class SensorBoxInline(TabularInline):
 
 class TenantStorageSettingsInline(TabularInline):
     model = TenantStorageSettings
-    extra = 1
+    # extra = 1
     
 class CameraInline(TabularInline):
     model = Camera
@@ -41,9 +43,26 @@ class TenantAdmin(ModelAdmin):
     list_display = ('tenant_id', 'tenant_name', 'location', 'domain', 'is_active', 'created_at')
     search_fields = ('tenant_name', 'location', 'domain')
     list_filter = ('is_active',)
-    
     inlines = [EntityTypeInline, TenantStorageSettingsInline]
-    
+    # actions = ['create_tenant_database']
+
+    # def save_model(self, request, obj, form, change):
+    #     """
+    #     Automatically create a new tenant database when a tenant is created.
+    #     """
+    #     if not change:  # If this is a new tenant being added
+    #         create_tenant(obj.tenant_id, obj.tenant_name, obj.location, obj.domain, obj.default_language)
+    #     super().save_model(request, obj, form, change)
+
+    # @admin.action(description="Create database for selected tenants")
+    # def create_tenant_database(self, request, queryset):
+    #     """
+    #     Django Admin Action: Manually create a database for selected tenants.
+    #     """
+    #     for tenant in queryset:
+    #         create_tenant(tenant.tenant_id, tenant.tenant_name, tenant.location, tenant.domain, tenant.default_language)
+    #     self.message_user(request, "Databases successfully created for selected tenants.")
+
 @admin.register(EntityType)
 class EntityTypeAdmin(ModelAdmin):
     """
