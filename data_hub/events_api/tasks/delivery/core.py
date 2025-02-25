@@ -29,6 +29,7 @@ def execute(self, payload, **kwargs):
                 delivery_id=payload.delivery_id
             )
             delivery.delivery_end = payload.delivery_end.replace(tzinfo=timezone.utc)
+            delivery.delivery_status = payload.delivery_status if payload.delivery_status else 'done'
             
         else:
             entity = PlantEntity.objects.get(entity_uid=payload.location, entity_type__tenant=tenant)
@@ -39,6 +40,7 @@ def execute(self, payload, **kwargs):
                 delivery_location=payload.location,
                 delivery_start=payload.delivery_start.replace(tzinfo=timezone.utc),
                 delivery_end=payload.delivery_end.replace(tzinfo=timezone.utc),
+                delivery_status=payload.delivery_status if payload.delivery_status else "on-going"
             )
         
         delivery.save()

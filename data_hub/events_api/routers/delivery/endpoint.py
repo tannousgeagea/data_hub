@@ -48,6 +48,7 @@ class DeliveryRequest(BaseModel):
     location: str
     delivery_start: datetime
     delivery_end: datetime
+    delivery_status: Optional[str] = None
 
 class DeliveryMediaRequest(BaseModel):
     delivery_id:str

@@ -58,7 +58,7 @@ class MediaAdmin(ModelAdmin):
 # Admin for Delivery Model
 @admin.register(Delivery)
 class DeliveryAdmin(ModelAdmin):
-    list_display = ('delivery_id', 'tenant', 'entity', 'delivery_start', 'delivery_end', 'delivery_location')
+    list_display = ('delivery_id', 'tenant', 'entity', 'delivery_start', 'delivery_end', "delivery_status")
     search_fields = ('delivery_id', 'tenant__name', 'entity__name')
     list_filter = ('tenant', 'entity', 'delivery_start', 'created_at')
     readonly_fields = ('created_at',)
