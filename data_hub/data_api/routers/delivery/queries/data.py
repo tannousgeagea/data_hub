@@ -233,6 +233,7 @@ def get_delivery_data(
         lookup_filters = Q()
         lookup_filters &= Q(tenant=tenant)
         lookup_filters &= Q(created_at__range=(from_date, to_date ))
+        lookup_filters &= Q(is_deleted=False)
         for key, value in validated_filters:
             filter_map = filter_mapping(key, value, tenant=tenant)
             if filter_map:

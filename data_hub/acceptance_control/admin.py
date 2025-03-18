@@ -63,7 +63,7 @@ class DeliveryAdmin(ModelAdmin):
     list_filter = ('tenant', 'entity', 'delivery_start', 'created_at')
     readonly_fields = ('created_at',)
     fieldsets = (
-        ('Delivery Info', {'fields': ('tenant', 'entity', 'delivery_id', 'delivery_status', 'delivery_location')}),
+        ('Delivery Info', {'fields': ('tenant', 'entity', 'delivery_id', 'delivery_status', 'delivery_location', 'is_deleted')}),
         ('Time Info', {'fields': ('delivery_start', 'delivery_end')}),
         ('Timestamps', {'fields': ('created_at',)}),
     )

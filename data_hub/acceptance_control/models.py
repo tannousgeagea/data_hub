@@ -54,13 +54,15 @@ class Delivery(models.Model):
     delivery_location = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     
+    # Soft delete flag
+    is_deleted = models.BooleanField(default=False)
+
     class Meta:
         db_table = 'delivery'
         verbose_name_plural = 'Deliveries'
     
     def __str__(self):
         return f"Delivery {self.delivery_id} for {self.tenant}"
-
 
 
 class DeliveryMedia(models.Model):
@@ -245,6 +247,10 @@ class AlarmFeedback(models.Model):
         blank=True,
     )
     meta_info = models.JSONField(null=True, blank=True)
+    contains_other_object = models.BooleanField(
+        default=False,
+        help_text="Check if the event contains another object."
+    )
 
     class Meta:
         db_table = 'alarm_feedback'

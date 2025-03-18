@@ -123,6 +123,7 @@ class Request(BaseModel):
     rating:Optional[int] = None
     meta_info:Optional[Dict] = None
     is_actual_alarm:Optional[bool] = None
+    contains_other_object:Optional[bool] = None
 
 @router.api_route(
     "/feedback/alarm", methods=["POST"], tags=["Feedback"], description=description,
