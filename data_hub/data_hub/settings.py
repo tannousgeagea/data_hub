@@ -80,7 +80,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'data_hub.wsgi.application'
 LOGIN_REDIRECT_URL = '/metadata/'
-LOGOUT_REDIRECT_URL = '/login/'
+# LOGOUT_REDIRECT_URL = '/login/'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases

@@ -3,7 +3,7 @@ version: '3.3'
 services:
   # core
   data-hub:
-    image: tannous/tannous:data-hub-ubuntu.22.04
+    image: tannousgeagea/datahub:latest
     container_name: data-hub-core
     stdin_open: true # docker run -i
     tty: true        # docker run -t
