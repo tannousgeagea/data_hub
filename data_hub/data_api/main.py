@@ -23,6 +23,8 @@ ROUTERS = [
     if not f.endswith('__.py')
     ]
 
+print(ROUTERS)
+
 def create_app() -> FastAPI:
     tags_meta = [
         {

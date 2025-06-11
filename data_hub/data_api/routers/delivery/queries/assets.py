@@ -146,10 +146,10 @@ This API is used to fetch comprehensive information and analytics related to a s
 @router.api_route(
     "/delivery/assets/{delivery_id}", methods=["GET"], tags=["Delivery"], description=description,
 )
-def get_delivery_assets(response: Response, delivery_id:str):
+def get_delivery_assets(response: Response, delivery_id:str, language:str=None):
     results = {}
     try:
-        language = Language.objects.get(code='de')
+        # language = Language.objects.get(code='de')
         if delivery_id == 'null':
             results['error'] = {
                 'status_code': "bad-request",
@@ -169,6 +169,28 @@ def get_delivery_assets(response: Response, delivery_id:str):
             return results
             
         delivery = Delivery.objects.get(delivery_id=delivery_id)
+        tenant = delivery.tenant
+        if not language:
+            lang_code = tenant.default_language
+            if lang_code:
+                language = lang_code
+                msg = f'using default language: {language}'
+            else:
+                language = 'de'
+                msg = f"using german language"
+        
+        if not Language.objects.filter(code=language).exists():
+            results = {
+                "error": {
+                    "status_code": "not found",
+                    "status_description": f"Given Language {language} not supported",
+                    "detail": f"Given Language {language} not supported! Supported Language: {[lang.name for lang in Language.objects.all()]}",
+                }
+            }    
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return results
+        
+        language = Language.objects.get(code=language)
         table_assets = TenantTableAsset.objects.filter(
             tenant_table=TenantTable.objects.get(
                 tenant=delivery.tenant,
@@ -179,7 +201,7 @@ def get_delivery_assets(response: Response, delivery_id:str):
         
         AzAccoutKey = TenantStorageSettings.objects.get(tenant=delivery.tenant).account_key
         placeholder = {
-            'url': f"https://wacoreblob.blob.core.windows.net/amk/placeholder.jpg?{AzAccoutKey}",
+            'url': f"https://wacoreblob.blob.core.windows.net/{delivery.tenant.tenant_name.lower()}/placeholder.jpg?{AzAccoutKey}",
             'name': "Bild in Vorbereitung",
             'time': (datetime.now() + timedelta(hours=2)).strftime(DATETIME_FORMAT),
             }

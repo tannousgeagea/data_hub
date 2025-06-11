@@ -45,7 +45,7 @@ router = APIRouter(
 
 description = """
 
-    GET /feedback/alarm/{event_uid}
+    GET /feedback/alarm/out/{event_uid}
     Overview
 
     This API endpoint retrieves feedback for a specific alarm identified by its event_uid. It provides detailed information about the feedback, including its validity, severity, and any associated metadata. If no feedback has been provided yet, the API returns a placeholder response indicating that feedback is unavailable.

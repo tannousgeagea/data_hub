@@ -63,7 +63,10 @@ def filter_mapping(key, value, tenant):
             return None
         
         if key == "severity_level":
-            return ("flags__severity__level__gte", value) #Severity.objects.filter(level=value).first())
+            return [
+                ("flags__severity__level__gte", value),
+                ("flags__exclude_from_dashboard", False),
+            ]
         if key == "location":
             return ("entity", PlantEntity.objects.get(entity_uid=value, entity_type__tenant=tenant))
         if key == "flag_type":
@@ -237,9 +240,14 @@ def get_delivery_data(
         for key, value in validated_filters:
             filter_map = filter_mapping(key, value, tenant=tenant)
             if filter_map:
-                lookup_filters &= Q(filter_map) 
+                if isinstance(filter_map, list):
+                    for field, val in filter_map:
+                        lookup_filters &= Q(**{field: val})
+                else:
+                    field, val = filter_map
+                    lookup_filters &= Q(**{field: val}) 
         
-        language = Language.objects.get(code='de')
+        # language = Language.objects.get(code=language)
         deliveries = Delivery.objects.filter(lookup_filters).order_by('-created_at').distinct()
         
         filtered_deliveries =  []
@@ -247,7 +255,7 @@ def get_delivery_data(
         for delivery in deliveries:
             delivery_status = "done"
             duration = (delivery.delivery_end - delivery.delivery_start).seconds
-            if duration < 3:
+            if delivery.delivery_status == "on-going":
                 delivery_status = "ongoing"
             elif duration <30:
                 continue
@@ -265,7 +273,7 @@ def get_delivery_data(
                 "delivery_id": delivery.delivery_id,
                 "delivery_date": convert_to_local_time(utc_time=delivery.created_at, timezone_str=timezone_str).strftime('%Y-%m-%d'),
                 "start_time": convert_to_local_time(utc_time=delivery.delivery_start, timezone_str=timezone_str).strftime("%H:%M:%S"),
-                "end_time": convert_to_local_time(utc_time=delivery.delivery_end, timezone_str=timezone_str).strftime("%H:%M:%S") if ongoing[i] == "done" else "-",
+                "end_time": convert_to_local_time(utc_time=delivery.delivery_end, timezone_str=timezone_str).strftime("%H:%M:%S") if delivery.delivery_status == "done" else "-",
                 "location": PlantEntityLocalization.objects.get(plant_entity=delivery.entity, language=language).title if PlantEntityLocalization.objects.filter(plant_entity=delivery.entity, language=language).exists() else delivery.delivery_location,
                 }
 

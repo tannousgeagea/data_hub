@@ -99,6 +99,7 @@ def get_alarm_notification(
     tenant_domain:str,
     severity_level:str="3",
     language:str=None,
+    expire:int=5,
     items_per_page:int=15,
     ):
     results = {}
@@ -116,7 +117,7 @@ def get_alarm_notification(
             return results
         
         now = datetime.now(tz=timezone.utc)
-        before = (now - timedelta(hours=1)).replace(tzinfo=timezone.utc)
+        before = (now - timedelta(hours=expire)).replace(tzinfo=timezone.utc)
         
         tenant = Tenant.objects.get(domain=tenant_domain)
         if not language:
@@ -201,7 +202,7 @@ def get_alarm_notification(
                 "id": alarm.id,
                 "event_uid": alarm.event_uid,
                 "event_date": alarm.created_at.strftime('%Y-%m-%d'),
-                "timestamp": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
+                "timestamp": alarm.timestamp.strftime("%H:%M:%S"),
                 "location": plant_entity_localization.title,
                 "event_name": flag_type_localization.title,
                 "severity_level": alarm.severity.unicode_char,
@@ -267,6 +268,9 @@ def get_alarm_notification(
     return results
 
 
+class APIRequest(BaseModel):
+    event_uid:str
+
 description = """
     URL Path: /alarm
 
@@ -279,10 +283,11 @@ description = """
 )
 def update_alarm_status(
     response: Response,
-    event_uid: str,
+    data: APIRequest,
 ): 
     results = {}
     try:
+        event_uid = data.event_uid
         if event_uid == 'null':
             results['error'] = {
                 'status_code': "bad-request",

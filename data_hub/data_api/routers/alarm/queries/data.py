@@ -49,6 +49,13 @@ from metadata.models import (
     PlantEntityLocalization,
 )
 
+def map_description(desc:str):
+    try:
+        number = float(desc.split('[')[1].split(']')[0])
+        return f"{round(number * 100)} cm"
+    except:
+        return ""
+
 def filter_mapping(key, value, tenant):
     try:
         if value is None:
@@ -66,6 +73,8 @@ def filter_mapping(key, value, tenant):
             return ("entity", PlantEntity.objects.get(entity_uid=value, entity_type__tenant=tenant))
         if key == "flag_type":
             return ("flag_type", FlagType.objects.get(name=value))
+        if key == "value":
+            return ("value__gte", value)
     except Exception as err:
         raise ValueError(f"Failed to map filter value {value} filter {key}: {err}")
 
@@ -114,22 +123,10 @@ def get_alarm_data(
     to_date:datetime=None,
     items_per_page:int=15,
     page:int=1,
-    language:str='de',
+    language:str=None,
     ):
     results = {}
     try:
-        
-        if not Language.objects.filter(code=language).exists():
-            results = {
-                "error": {
-                    "status_code": "not found",
-                    "status_description": f"Given Language {language} not supported",
-                    "detail": f"Given Language {language} not supported! Supported Language: {[lang.name for lang in Language.objects.all()]}",
-                }
-            }
-            
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return results
         
         filters_dict = {}
         if user_filters:
@@ -162,9 +159,32 @@ def get_alarm_data(
             response.status_code = status.HTTP_404_NOT_FOUND
             return results
         
-        language = Language.objects.get(code=language)
+        # language = Language.objects.get(code=language)
         table_type = TableType.objects.get(name='alarm')
         tenant = Tenant.objects.get(domain=tenant_domain)
+
+        msg = f'using given language {language}'
+        if not language:
+            lang_code = tenant.default_language
+            if lang_code:
+                language = lang_code
+                msg = f'using default language: {language}'
+            else:
+                language = 'de'
+                msg = f"using german language"
+        if not Language.objects.filter(code=language).exists():
+            results = {
+                "error": {
+                    "status_code": "not found",
+                    "status_description": f"Given Language {language} not supported",
+                    "detail": f"Given Language {language} not supported! Supported Language: {[lang.name for lang in Language.objects.all()]}",
+                }
+            }
+
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return results
+
+        language = Language.objects.get(code=language)
         AzAccoutKey = TenantStorageSettings.objects.get(tenant=tenant).account_key
         
         if not TenantTable.objects.filter(tenant=tenant, table_type=table_type):
@@ -295,11 +315,11 @@ def get_alarm_data(
                 "event_date": alarm.created_at.strftime('%Y-%m-%d'),
                 "start_time": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
                 "end_time": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
-                "timestamp": convert_to_local_time(alarm.timestamp, timezone_str=timezone_str).strftime("%H:%M:%S"),
+                "timestamp": alarm.timestamp.strftime("%H:%M:%S"),
                 "location": plant_entity_localization.title,
                 "event_name": flag_type_localization.title,
                 "severity_level": alarm.severity.unicode_char,
-                "value": f"{int(round(alarm.meta_info.get('object_size'), 2) * 100)} cm" if alarm.meta_info and alarm.meta_info.get('object_size') else None,
+                "value": f"{map_description(alarm.meta_info.get('description'))}" if alarm.meta_info and alarm.meta_info.get('description') else None,
                 "preview": f"{media.media.media_url}?{AzAccoutKey}",
                 "ack_status": "✅" if alarm.ack_status else "⬛",
                 "severity_level_numerical": int(alarm.severity.level),

@@ -1,3 +1,4 @@
+import time
 import django
 django.setup()
 from django.db import IntegrityError
@@ -13,6 +14,7 @@ def execute(self, payload, **kwargs):
     try:
         
         if not Alarm.objects.filter(event_uid=payload.event_uid).exists():
+            time.sleep(15)
             raise ObjectDoesNotExist(
                 f"event_uid {payload.event_uid} does not exist"
             )
