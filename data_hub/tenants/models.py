@@ -1,4 +1,5 @@
 from django.db import models
+import pytz
 
 # Create your models here.
 class Tenant(models.Model):
@@ -10,6 +11,12 @@ class Tenant(models.Model):
     is_active = models.BooleanField(default=True, help_text="Indicates if the filter is currently active.")
     created_at = models.DateTimeField(auto_now_add=True)
     meta_info = models.JSONField(null=True, blank=True)
+    timezone = models.CharField(
+        max_length=50,
+        choices=[(tz, tz) for tz in pytz.all_timezones],
+        default="Europe/Berlin",
+        help_text="Timezone for the tenant"
+    )
     
     class Meta:
         db_table = "wa_tenant"

@@ -229,7 +229,7 @@ def get_metadata(
                             "value": FilterItemLocalization.objects.get(
                                 language=lang, filter_item=tenant_table_filter_item.filter_item
                                 ).item_value,
-                        } for tenant_table_filter_item in TenantTableFilterItem.objects.filter(tenant_table_filter=tenant_table_filter, is_active=True).order_by('filter_item__field_order') 
+                        } for tenant_table_filter_item in TenantTableFilterItem.objects.filter(tenant_table_filter=tenant_table_filter, is_active=True).order_by('filter_item__field_order__field_position') 
                         if FilterItemLocalization.objects.filter(language=lang, filter_item=tenant_table_filter_item.filter_item).exists()
                     ]
                 }

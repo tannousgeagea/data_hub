@@ -23,7 +23,7 @@ from common_utils.timezone_utils.timeloc import (
     convert_to_local_time,
 )
 
-timezone_str = get_location_and_timezone()
+# timezone_str = get_location_and_timezone()
 
 django.setup()
 from django.core.exceptions import ObjectDoesNotExist
@@ -158,6 +158,7 @@ def get_video_archive_data(
         language = Language.objects.get(code=language)
         table_type = TableType.objects.get(name='video_archive')
         tenant = Tenant.objects.get(domain=tenant_domain)
+        timezone_str = tenant.timezone
         AzAccoutKey = TenantStorageSettings.objects.get(tenant=tenant).account_key
         
         if not TenantTable.objects.filter(tenant=tenant, table_type=table_type):

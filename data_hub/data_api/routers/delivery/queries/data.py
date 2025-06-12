@@ -25,7 +25,7 @@ from common_utils.timezone_utils.timeloc import (
     convert_to_local_time,
 )
 
-timezone_str = get_location_and_timezone()
+# timezone_str = get_location_and_timezone()
 
 django.setup()
 from django.core.exceptions import ObjectDoesNotExist
@@ -181,6 +181,7 @@ def get_delivery_data(
         language = Language.objects.get(code=language)
         table_type = TableType.objects.get(name='delivery')
         tenant = Tenant.objects.get(domain=tenant_domain)
+        timezone_str = tenant.timezone
         
         today = datetime.today()
         if from_date is None:

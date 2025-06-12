@@ -3,6 +3,7 @@ import json
 import time
 import math
 import django
+import pytz
 from django.db import connection
 from django.db.models import Q
 from fastapi import status
@@ -22,8 +23,9 @@ from common_utils.timezone_utils.timeloc import (
     get_location_and_timezone,
     convert_to_local_time,
 )
+from common_utils.filters.utils import map_value_range, map_value, map_description
 
-timezone_str = get_location_and_timezone()
+# timezone_str = get_location_and_timezone()
 
 django.setup()
 from django.core.exceptions import ObjectDoesNotExist
@@ -48,14 +50,7 @@ from metadata.models import (
     TenantTableFilter,
     PlantEntityLocalization,
 )
-
-def map_description(desc:str):
-    try:
-        number = float(desc.split('[')[1].split(']')[0])
-        return f"{round(number * 100)} cm"
-    except:
-        return ""
-
+    
 def filter_mapping(key, value, tenant):
     try:
         if value is None:
@@ -74,7 +69,7 @@ def filter_mapping(key, value, tenant):
         if key == "flag_type":
             return ("flag_type", FlagType.objects.get(name=value))
         if key == "value":
-            return ("value__gte", value)
+            return map_value_range(value)
     except Exception as err:
         raise ValueError(f"Failed to map filter value {value} filter {key}: {err}")
 
@@ -162,6 +157,7 @@ def get_alarm_data(
         # language = Language.objects.get(code=language)
         table_type = TableType.objects.get(name='alarm')
         tenant = Tenant.objects.get(domain=tenant_domain)
+        timezone_str = tenant.timezone
 
         msg = f'using given language {language}'
         if not language:
@@ -187,13 +183,15 @@ def get_alarm_data(
         language = Language.objects.get(code=language)
         AzAccoutKey = TenantStorageSettings.objects.get(tenant=tenant).account_key
         
+
+        print(timezone_str)
         if not TenantTable.objects.filter(tenant=tenant, table_type=table_type):
             results = {
                 "error": {
                     "status_code": "not found",
                     "status_description": f"Table Type alarm not defined for tenant {tenant_domain}",
                     "detail": f"Table Type alarm not found for {tenant_domain}!" \
-                        f"Existing options: {[tenant_table.table_type.name for tenant_table in TableType.objects.filter(tenant=tenant)]}",
+                        f"Existing options: {[tenant_table.table_type.name for tenant_table in TenantTable.objects.filter(tenant=tenant)]}",
                 }
             }
             
@@ -223,11 +221,13 @@ def get_alarm_data(
             response.status_code = status.HTTP_400_BAD_REQUEST    
             return results
         
+        print(table_type)
         tenant_table = TenantTable.objects.get(
             tenant=tenant,
             table_type=table_type
         )
         
+        print(tenant_table)
         tenant_table_filter = TenantTableFilter.objects.filter(
             tenant_table=tenant_table,
             is_active=True
@@ -257,10 +257,17 @@ def get_alarm_data(
         for key, value in validated_filters:
             filter_map = filter_mapping(key, value, tenant)
             if filter_map:
-                lookup_filters &= Q(filter_map) 
+                if isinstance(filter_map, list):
+                    for field, val in filter_map:
+                        lookup_filters &= Q(**{field: val})
+                else:
+                    field, val = filter_map
+                    lookup_filters &= Q(**{field: val})
         
         rows = []
         alarms = Alarm.objects.filter(lookup_filters).order_by('-created_at')
+
+        print(alarms)
         for alarm in alarms[(page - 1) * items_per_page:page * items_per_page]:
             flag_type = alarm.flag_type
             plant_entity = PlantEntity.objects.get(entity_uid=alarm.entity.entity_uid, entity_type__tenant=tenant)
@@ -319,7 +326,7 @@ def get_alarm_data(
                 "location": plant_entity_localization.title,
                 "event_name": flag_type_localization.title,
                 "severity_level": alarm.severity.unicode_char,
-                "value": f"{map_description(alarm.meta_info.get('description'))}" if alarm.meta_info and alarm.meta_info.get('description') else None,
+                "value": map_value(alarm.value, flag_type=flag_type.name),
                 "preview": f"{media.media.media_url}?{AzAccoutKey}",
                 "ack_status": "✅" if alarm.ack_status else "⬛",
                 "severity_level_numerical": int(alarm.severity.level),
