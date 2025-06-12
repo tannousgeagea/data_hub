@@ -53,16 +53,17 @@ class Delivery(models.Model):
     delivery_status = models.CharField(max_length=255, default='pending', choices=STATUS_CHOICES, null=True)
     delivery_location = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     # Soft delete flag
     is_deleted = models.BooleanField(default=False)
-
+    
     class Meta:
         db_table = 'delivery'
         verbose_name_plural = 'Deliveries'
     
     def __str__(self):
         return f"Delivery {self.delivery_id} for {self.tenant}"
+
 
 
 class DeliveryMedia(models.Model):

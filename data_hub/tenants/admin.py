@@ -62,7 +62,7 @@ class PlantEntityAdmin(ModelAdmin):
     """
     Admin interface for the PlantEntity model.
     """
-    list_display = ('entity_type', 'entity_uid', 'description', 'created_At')  # Display fields in the list view
+    list_display = ("id", 'entity_type', 'entity_uid', 'description', 'created_At')  # Display fields in the list view
     search_fields = ('entity_uid', 'description', 'entity_type__entity_type')  # Search by UID, description, and entity type
     list_filter = ('entity_type', 'created_At')  # Add filters for entity type and creation date
     ordering = ('-created_At',)  # Order by creation date, newest first

@@ -58,12 +58,12 @@ class MediaAdmin(ModelAdmin):
 # Admin for Delivery Model
 @admin.register(Delivery)
 class DeliveryAdmin(ModelAdmin):
-    list_display = ('delivery_id', 'tenant', 'entity', 'delivery_start', 'delivery_end', "delivery_status")
-    search_fields = ('delivery_id', 'tenant__name', 'entity__name')
+    list_display = ('delivery_id', 'tenant', 'entity', 'delivery_start', 'delivery_end', 'delivery_status')
+    search_fields = ('delivery_id', 'tenant__tenant_name')
     list_filter = ('tenant', 'entity', 'delivery_start', 'created_at')
     readonly_fields = ('created_at',)
     fieldsets = (
-        ('Delivery Info', {'fields': ('tenant', 'entity', 'delivery_id', 'delivery_status', 'delivery_location', 'is_deleted')}),
+        ('Delivery Info', {'fields': ('tenant', 'entity', 'delivery_id', 'delivery_location', 'delivery_status', 'is_deleted')}),
         ('Time Info', {'fields': ('delivery_start', 'delivery_end')}),
         ('Timestamps', {'fields': ('created_at',)}),
     )
@@ -112,9 +112,9 @@ class TenantFlagDeploymentAdmin(ModelAdmin):
 
 @admin.register(Alarm)
 class AlarmAdmin(ModelAdmin):
-    list_display = ('tenant', "entity", "flag_type", "severity", "delivery_id", "created_at")
-    search_fields = ("event_uid", "delivery_id")
-    list_filter = ('tenant__tenant_name', "flag_type__name", "entity__entity_uid", "created_at", DuplicateEventUIDFilter)
+    list_display = ('id', 'tenant', "entity", "flag_type", "severity", "delivery_id", "created_at")
+    search_fields = ("event_uid", "delivery_id", "id")
+    list_filter = ('tenant__tenant_name', "flag_type__name", "entity__entity_uid", "created_at", "exclude_from_dashboard",  DuplicateEventUIDFilter)
     
 @admin.register(AlarmAttr)
 class AlarmAttrAdmin(ModelAdmin):
@@ -148,6 +148,7 @@ class AlarmFeedbackAdmin(ModelAdmin):
         'alarm',
         'is_actual_alarm',
         'rating',
+        'comment',
         'user_id',
         'created_at',
         'updated_at',
@@ -156,6 +157,7 @@ class AlarmFeedbackAdmin(ModelAdmin):
         'is_actual_alarm',
         'rating',
         'created_at',
+        'alarm__tenant',
     )
     search_fields = (
         'alarm__event_uid',

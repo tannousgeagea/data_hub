@@ -228,7 +228,7 @@ class FilterItem(models.Model):
         ]
 
     def __str__(self):
-        return f"Filter Item: {self.item_key} (Key: {self.item_key})"
+        return f"{self.table_filter}: {self.item_key}"
     
 class FilterLocalization(models.Model):
     """
