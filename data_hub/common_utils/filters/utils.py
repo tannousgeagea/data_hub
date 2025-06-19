@@ -14,6 +14,16 @@ def map_value_range(value:str):
             ("value__lte", upper)
         ]
 
+    # Handle range like "51 - 100"
+    range_match = re.match(r"^(\d+)\s*_\s*(\d+)", value)
+    if range_match:
+        lower = int(range_match.group(1)) / 100
+        upper = int(range_match.group(2)) / 100
+        return [
+            ("value__gte", lower),
+            ("value__lte", upper)
+        ]
+
     # Handle threshold like "> 150 cm"
     gt_match = re.match(r"^>\s*(\d+)", value)
     if gt_match:
@@ -50,3 +60,16 @@ def map_value(value:float, flag_type:str):
         return f"{value} °C"
     else:
         return None
+    
+def map_entity_type_to_table_type(entity_type:str=None):
+    if entity_type is None: 
+        return "alarm"
+    
+    entity_type = entity_type.lower()
+    if entity_type not in ["gate", "trichter", "bunker"]:
+        return "alarm"
+    
+    if entity_type != "gate":
+        return f"alarm{entity_type}"
+
+    return "alarm"

@@ -23,7 +23,7 @@ from common_utils.timezone_utils.timeloc import (
     get_location_and_timezone,
     convert_to_local_time,
 )
-from common_utils.filters.utils import map_value_range, map_value, map_description
+from common_utils.filters.utils import map_value_range, map_value, map_entity_type_to_table_type
 
 # timezone_str = get_location_and_timezone()
 
@@ -31,6 +31,7 @@ django.setup()
 from django.core.exceptions import ObjectDoesNotExist
 from tenants.models import (
     Tenant,
+    EntityType,
     PlantEntity,
     TenantStorageSettings,
 )
@@ -70,6 +71,8 @@ def filter_mapping(key, value, tenant):
             return ("flag_type", FlagType.objects.get(name=value))
         if key == "value":
             return map_value_range(value)
+        if key == "entity_type":
+            return ("entity__entity_type", EntityType.objects.get(entity_type=value))
     except Exception as err:
         raise ValueError(f"Failed to map filter value {value} filter {key}: {err}")
 
@@ -119,6 +122,7 @@ def get_alarm_data(
     items_per_page:int=15,
     page:int=1,
     language:str=None,
+    entity_type:str=f"gate"
     ):
     results = {}
     try:
@@ -142,7 +146,9 @@ def get_alarm_data(
             response.status_code = status.HTTP_404_NOT_FOUND
             return results
         
-        if not TableType.objects.filter(name='alarm').exists():
+
+        alarm_type = map_entity_type_to_table_type(entity_type)
+        if not TableType.objects.filter(name=alarm_type).exists():
             results = {
                 "error": {
                     "status_code": "not found",
@@ -155,9 +161,10 @@ def get_alarm_data(
             return results
         
         # language = Language.objects.get(code=language)
-        table_type = TableType.objects.get(name='alarm')
+        table_type = TableType.objects.get(name=alarm_type)
         tenant = Tenant.objects.get(domain=tenant_domain)
         timezone_str = tenant.timezone
+        entity_type = EntityType.objects.filter(entity_type=entity_type, tenant=tenant).first()
 
         msg = f'using given language {language}'
         if not language:
@@ -221,13 +228,11 @@ def get_alarm_data(
             response.status_code = status.HTTP_400_BAD_REQUEST    
             return results
         
-        print(table_type)
         tenant_table = TenantTable.objects.get(
             tenant=tenant,
             table_type=table_type
         )
         
-        print(tenant_table)
         tenant_table_filter = TenantTableFilter.objects.filter(
             tenant_table=tenant_table,
             is_active=True
@@ -254,6 +259,9 @@ def get_alarm_data(
         lookup_filters &= Q(tenant=tenant)
         lookup_filters &= Q(exclude_from_dashboard=False)
         lookup_filters &= Q(created_at__range=(from_date, to_date ))
+        if entity_type:
+            lookup_filters &= Q(entity__entity_type=entity_type)
+
         for key, value in validated_filters:
             filter_map = filter_mapping(key, value, tenant)
             if filter_map:
