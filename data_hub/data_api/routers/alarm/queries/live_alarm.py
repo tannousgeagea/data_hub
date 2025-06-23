@@ -29,6 +29,7 @@ django.setup()
 from django.core.exceptions import ObjectDoesNotExist
 from tenants.models import (
     Tenant,
+    EntityType,
     PlantEntity,
     TenantStorageSettings,
 )
@@ -101,6 +102,7 @@ def get_alarm_notification(
     language:str=None,
     expire:int=5,
     items_per_page:int=15,
+    entity_type:str=f"gate"
     ):
     results = {}
     try:
@@ -120,6 +122,7 @@ def get_alarm_notification(
         before = (now - timedelta(hours=expire)).replace(tzinfo=timezone.utc)
         
         tenant = Tenant.objects.get(domain=tenant_domain)
+        entity_type = EntityType.objects.filter(entity_type=entity_type, tenant=tenant).first()
         if not language:
             lang_code = tenant.default_language
             if lang_code:
@@ -148,6 +151,8 @@ def get_alarm_notification(
         lookup_filters &= Q(("severity__level__gte", severity_level))
         lookup_filters &= Q(exclude_from_dashboard=False)
         lookup_filters &= Q(created_at__range=(before, now))
+        if entity_type:
+            lookup_filters &= Q(entity__entity_type=entity_type)
         
         rows = []
         alarms = Alarm.objects.filter(lookup_filters).order_by('-created_at')

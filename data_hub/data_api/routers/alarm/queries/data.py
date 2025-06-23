@@ -20,12 +20,9 @@ from fastapi.routing import APIRoute
 from typing import Dict, List, Optional
 from pydantic import BaseModel, Field, create_model, ValidationError
 from common_utils.timezone_utils.timeloc import (
-    get_location_and_timezone,
     convert_to_local_time,
 )
 from common_utils.filters.utils import map_value_range, map_value, map_entity_type_to_table_type
-
-# timezone_str = get_location_and_timezone()
 
 django.setup()
 from django.core.exceptions import ObjectDoesNotExist
