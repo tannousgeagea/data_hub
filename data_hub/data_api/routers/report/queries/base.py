@@ -19,17 +19,15 @@ from fastapi import APIRouter
 from fastapi import Query
 from fastapi import HTTPException
 from fastapi.routing import APIRoute
-from pydantic import BaseModel, create_model, ValidationError
 from common_utils.timezone_utils.timeloc import (
-    get_location_and_timezone,
     convert_to_local_time,
 )
 
-timezone_str = get_location_and_timezone()
-
 from metadata.models import (
     Language,
-    PlantEntityLocalization
+    PlantEntityLocalization,
+    TableField,
+    TableFieldLocalization,
 )
 
 from acceptance_control.models import (
@@ -86,6 +84,8 @@ def get_delivery(
         
         delivery = Delivery.objects.get(delivery_id=delivery_id)
         tenant = delivery.tenant
+        timezone_str = tenant.timezone
+
         if not language:
             lang_code = tenant.default_language
             if lang_code:
@@ -107,18 +107,36 @@ def get_delivery(
             return results
         
         language = Language.objects.get(code=language)
+        table_fields = TableField.objects.all()
+        
+        col = {}
+        for table_field in table_fields:            
+            localization = TableFieldLocalization.objects.filter(
+                language=language, 
+                field=table_field
+            ).first()
+            
+            if not localization:
+                continue
+
+            col[table_field.name] = {
+                "title": localization.title,
+                "type": table_field.type.type,
+                "field_key": table_field.name,
+                "description": localization.description,
+            }
+            
         data = {
-            "id": delivery.id,
-                "id": delivery.id,
-                "delivery_id": delivery.delivery_id,
-                "delivery_date": convert_to_local_time(utc_time=delivery.created_at, timezone_str=timezone_str).strftime('%Y-%m-%d'),
-                "start_time": convert_to_local_time(utc_time=delivery.delivery_start, timezone_str=timezone_str).strftime("%H:%M:%S"),
-                "end_time": convert_to_local_time(utc_time=delivery.delivery_end, timezone_str=timezone_str).strftime("%H:%M:%S"),
-                "location": (
-                    PlantEntityLocalization.objects.get(plant_entity=delivery.entity, language=language).title 
-                    if PlantEntityLocalization.objects.filter(plant_entity=delivery.entity, language=language).exists() 
-                    else delivery.delivery_location
-                    ),
+            col.get("id", {}).get('title') or "id": delivery.pk,
+            col.get("delivery_id", {}).get('title') or "delivery_id": delivery.delivery_id,
+            col.get("delivery_date", {}).get('title') or "delivery_date": convert_to_local_time(utc_time=delivery.created_at, timezone_str=timezone_str).strftime('%Y-%m-%d'),
+            col.get("start_time", {}).get('title') or "start_time": convert_to_local_time(utc_time=delivery.delivery_start, timezone_str=timezone_str).strftime("%H:%M:%S"),
+            col.get("end_time", {}).get('title') or "end_time": convert_to_local_time(utc_time=delivery.delivery_end, timezone_str=timezone_str).strftime("%H:%M:%S"),
+            col.get("location", {}).get('title') or "location": (
+                PlantEntityLocalization.objects.get(plant_entity=delivery.entity, language=language).title 
+                if PlantEntityLocalization.objects.filter(plant_entity=delivery.entity, language=language).exists() 
+                else delivery.delivery_location
+            ),
         }
 
         results = {
