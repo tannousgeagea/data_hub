@@ -28,10 +28,14 @@ from metadata.models import (
     PlantEntityLocalization,
     TableField,
     TableFieldLocalization,
+    TenantAttachmentRequirement,
+    FormFieldLocalization,
+    FormField
 )
 
 from acceptance_control.models import (
-    Delivery
+    Delivery,
+    DeliveryERPAttachment
 )
 
 class TimedRoute(APIRoute):
@@ -126,9 +130,59 @@ def get_delivery(
                 "description": localization.description,
             }
             
+        erp_data = {}
+        erp_attachments = TenantAttachmentRequirement.objects.filter(tenant=tenant, is_active=True)
+        for erp_attachment in erp_attachments:
+            erp_localization = erp_attachment.attachment_type.name
+            field = TableField.objects.filter(name=erp_attachment.attachment_type.name).first()
+            if field:
+                erp_localization = TableFieldLocalization.objects.filter(field=field).first()
+                erp_localization = erp_localization.title if erp_localization else erp_attachment.attachment_type.name
+
+            if not DeliveryERPAttachment.objects.filter(
+                delivery=delivery,
+                attachment_type=erp_attachment.attachment_type
+            ).exists():
+                
+                erp_data.update(
+                    {   
+                        erp_localization: "-",
+                    }
+                )
+                continue
+
+            erp_data.update(
+                {
+                    erp_localization: DeliveryERPAttachment.objects.get(
+                        delivery=delivery,
+                        attachment_type=erp_attachment.attachment_type
+                    ).value,
+                }
+            )
+
+        feedback_form_field = FormField.objects.filter(
+            name="comment",
+        ).first()
+        
+        comment = {}
+        if feedback_form_field:
+            feedback_field_localization = FormFieldLocalization.objects.get(
+                            field=feedback_form_field, 
+                            language=language
+                            ).title if FormFieldLocalization.objects.filter(
+                                field=feedback_form_field,
+                                language=language,
+                                ).exists() else feedback_form_field.name
+            
+            comment.update(
+                {
+                    feedback_field_localization: "-"
+                }
+            )
+
         data = {
             col.get("id", {}).get('title') or "id": delivery.pk,
-            col.get("delivery_id", {}).get('title') or "delivery_id": delivery.delivery_id,
+            # col.get("delivery_id", {}).get('title') or "delivery_id": delivery.delivery_id,
             col.get("delivery_date", {}).get('title') or "delivery_date": convert_to_local_time(utc_time=delivery.created_at, timezone_str=timezone_str).strftime('%Y-%m-%d'),
             col.get("start_time", {}).get('title') or "start_time": convert_to_local_time(utc_time=delivery.delivery_start, timezone_str=timezone_str).strftime("%H:%M:%S"),
             col.get("end_time", {}).get('title') or "end_time": convert_to_local_time(utc_time=delivery.delivery_end, timezone_str=timezone_str).strftime("%H:%M:%S"),
@@ -137,6 +191,8 @@ def get_delivery(
                 if PlantEntityLocalization.objects.filter(plant_entity=delivery.entity, language=language).exists() 
                 else delivery.delivery_location
             ),
+            **erp_data,
+            **comment,
         }
 
         results = {
