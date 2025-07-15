@@ -59,6 +59,9 @@ def filter_mapping(key, value, tenant):
         if value is None:
             return None
 
+        if not len(value):
+            return None
+
         if value == "all":
             return None
         

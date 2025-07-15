@@ -197,7 +197,7 @@ def get_delivery_assets(response: Response, delivery_id:str, language:str=None):
                 table_type=TableType.objects.get(name='delivery'),
             ),
             is_active=True,
-        )
+        ).order_by('field_order__field_position')
         
         AzAccoutKey = TenantStorageSettings.objects.get(tenant=delivery.tenant).account_key
         placeholder = {
@@ -250,7 +250,7 @@ def get_delivery_assets(response: Response, delivery_id:str, language:str=None):
                         'data': [
                             {
                                 'url': f"{media.media.media_url}?{AzAccoutKey}",
-                                'name': media.media.media_name,
+                                'name': media.media.media_name if len(medias) else 'image',
                                 'time': media.media.created_at.strftime(DATETIME_FORMAT),
                             } for media in medias if media.media.media_type == item.media_type
                         ] if len(medias) else [placeholder]
