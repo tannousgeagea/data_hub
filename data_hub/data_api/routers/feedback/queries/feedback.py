@@ -9,7 +9,7 @@ from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 from typing import Callable
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from fastapi import Depends, Body
 from fastapi import Request
 from fastapi import Response
@@ -25,7 +25,10 @@ from acceptance_control.models import (
     AlarmFeedback,
     Severity,
     DeliveryFlag,
+    AlarmTag,
 )
+
+from metadata.models import Tag
 
 class TimedRoute(APIRoute):
     def get_route_handler(self) -> Callable:
@@ -122,6 +125,7 @@ class Request(BaseModel):
     comment:Optional[str] = None
     rating:Optional[int] = None
     meta_info:Optional[Dict] = None
+    tags:Optional[List[str]] = None
     is_actual_alarm:Optional[bool] = None
     contains_other_object:Optional[bool] = None
 
@@ -203,7 +207,7 @@ def insert_feedback(response: Response, request:Request = Body()):
         alarm.feedback_provided = True
         alarm.exclude_from_dashboard = not alarm.is_actual_alarm
         alarm.save()
-        
+
         delivery_flag = DeliveryFlag.objects.filter(event_uid=alarm.event_uid)
         if delivery_flag:
             delivery_flag = delivery_flag.first()
@@ -213,6 +217,16 @@ def insert_feedback(response: Response, request:Request = Body()):
             delivery_flag.exclude_from_dashboard = not delivery_flag.is_actual_alarm
             delivery_flag.save()
             
+        if request.tags is not None and len(request.tags):
+            for tag_name in request.tags:
+                tag, _ = Tag.objects.get_or_create(name=tag_name)
+                AlarmTag.objects.get_or_create(
+                    alarm=alarm,
+                    tag=tag,
+                    tagged_by=user_id,
+                    source='human',
+                )
+                
         results['status_code'] = "ok"
         results["detail"] = "data retrieved successfully"
         results["status_description"] = "OK"

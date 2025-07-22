@@ -425,6 +425,20 @@ UNFOLD = {
                             "admin:metadata_tenantfeedbackform_changelist"
                         ),
                     },
+                    {
+                        "title": _("Tag Group"),
+                        "icon": "style",
+                        "link": reverse_lazy(
+                            "admin:metadata_taggroup_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Tags"),
+                        "icon": "tag",
+                        "link": reverse_lazy(
+                            "admin:metadata_tag_changelist"
+                        ),
+                    },
                 ],
             },
             {

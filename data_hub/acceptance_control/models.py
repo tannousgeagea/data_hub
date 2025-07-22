@@ -11,7 +11,11 @@ from metadata.models import (
     DataType,
     ERPDataType,
     AttachmentAcquisitionConfiguration,
+    Tag,
 )
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 class Media(models.Model):
     IMAGE = 'image'
@@ -188,6 +192,30 @@ class Alarm(models.Model):
         
     def __str__(self):
         return f"Alarm {self.event_uid} for {self.tenant}"
+
+class AlarmTag(models.Model):
+    alarm = models.ForeignKey(Alarm, on_delete=models.CASCADE, related_name='alarm_tags')
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='tagged_alarm')
+    tagged_by = models.CharField(max_length=255, null=True, blank=True)
+    tagged_at = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(
+        max_length=50,
+        choices=[('auto', 'Auto'), ('human', 'Human'), ('model', 'Model')],
+        default='auto'
+    )
+    confidence = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('alarm', 'tag')
+        db_table = 'alarm_tag'
+        verbose_name_plural = 'Alarm Tags'
+        indexes = [
+            models.Index(fields=['tag']),
+            models.Index(fields=['alarm']),
+        ]
+
+    def __str__(self):
+        return f"{self.alarm.event_uid} - {self.tag.name}"
 
 class AlarmAttr(models.Model):
     alarm = models.ForeignKey(Alarm, related_name="alarm_attr", on_delete=models.RESTRICT)

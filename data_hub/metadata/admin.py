@@ -25,7 +25,7 @@ from .models import (
 
 from .models import (
     FormField, FormFieldLocalization, FeedbackForm, FeedbackFormField, FeedbackFormFieldItem,
-    FeedbackFormFieldItemLocalization, TenantFeedbackForm,
+    FeedbackFormFieldItemLocalization, TenantFeedbackForm, Tag, TagGroup
 )
 
 class TableFieldLocalizationInline(TabularInline):
@@ -293,3 +293,20 @@ class TenantFeedbackFormAdmin(ModelAdmin):
     list_display = ('tenant', 'feedback_form', 'is_active', 'created_at')
     search_fields = ('tenant__name', 'feedback_form__name')
     list_filter = ('is_active',)
+
+
+#######################################################
+#################### Tag ##############################
+#######################################################
+@admin.register(TagGroup)
+class TagGroupAdmin(ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
+
+
+@admin.register(Tag)
+class TagAdmin(ModelAdmin):
+    list_display = ('name', 'group', 'color')
+    list_filter = ('group',)
+    search_fields = ('name',)
+    autocomplete_fields = ('group',)

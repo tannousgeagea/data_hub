@@ -16,6 +16,7 @@ from .models import (
     AlarmAttr,
     VideoArchive,
     VideoArchiveMedia,
+    AlarmTag,
 )
 
 from django.contrib.admin import SimpleListFilter
@@ -109,13 +110,18 @@ class TenantFlagDeploymentAdmin(ModelAdmin):
     search_fields = ('tenant__tenant_name', 'flag_type__name')
     list_filter = ('is_deployed',)
 
+class AlarmTagInline(TabularInline):
+    model = AlarmTag
+    extra = 1
+    autocomplete_fields = ['tag']
 
 @admin.register(Alarm)
 class AlarmAdmin(ModelAdmin):
     list_display = ('id', 'tenant', "entity", "flag_type", "severity", "delivery_id", "created_at")
     search_fields = ("event_uid", "delivery_id", "id")
     list_filter = ('tenant__tenant_name', "flag_type__name", "entity__entity_uid", "created_at", "exclude_from_dashboard",  DuplicateEventUIDFilter)
-    
+    inlines = [AlarmTagInline]
+
 @admin.register(AlarmAttr)
 class AlarmAttrAdmin(ModelAdmin):
     list_display = ("alarm", "key", "value")
