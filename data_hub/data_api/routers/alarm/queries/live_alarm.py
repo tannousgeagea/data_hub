@@ -16,6 +16,7 @@ from fastapi import Response
 from fastapi import APIRouter
 from fastapi import HTTPException, Query, Body, Form
 from fastapi.routing import APIRoute
+from django.db.models import Prefetch
 from typing import Dict, List, Optional
 from pydantic import BaseModel, Field, create_model, ValidationError
 from common_utils.timezone_utils.timeloc import (
@@ -37,6 +38,7 @@ from tenants.models import (
 
 from acceptance_control.models import (
     Alarm,
+    AlarmTag,
     AlarmMedia,
     Severity,
     FlagType,
@@ -100,7 +102,7 @@ def get_alarm_notification(
     tenant_domain:str,
     severity_level:str="3",
     language:str=None,
-    expire:int=5,
+    expire:int=120,
     items_per_page:int=15,
     entity_type:str=f"gate"
     ):
@@ -119,7 +121,7 @@ def get_alarm_notification(
             return results
         
         now = datetime.now(tz=timezone.utc)
-        before = (now - timedelta(hours=expire)).replace(tzinfo=timezone.utc)
+        before = (now - timedelta(minutes=expire)).replace(tzinfo=timezone.utc)
         
         tenant = Tenant.objects.get(domain=tenant_domain)
         entity_type = EntityType.objects.filter(entity_type=entity_type, tenant=tenant).first()
@@ -155,7 +157,12 @@ def get_alarm_notification(
             lookup_filters &= Q(entity__entity_type=entity_type)
         
         rows = []
-        alarms = Alarm.objects.filter(lookup_filters).order_by('-created_at')
+        alarms = Alarm.objects.filter(lookup_filters).order_by('-created_at').prefetch_related(
+            Prefetch(
+                'alarm_tags',
+                queryset=AlarmTag.objects.select_related('tag')
+            )
+        )
         for alarm in alarms:
             flag_type = alarm.flag_type
             plant_entity = PlantEntity.objects.get(entity_uid=alarm.entity.entity_uid, entity_type__tenant=tenant)
@@ -215,6 +222,7 @@ def get_alarm_notification(
                 "url": f"{media.media.media_url}?{AzAccoutKey}",
                 "name": media.media.media_name,
                 "type": media.media.media_type,
+                "tags": [alarm_tag.tag.name for alarm_tag in alarm.alarm_tags.all()],
                 # "media": [
                 #     {
                 #         "url": f"{media.media.media_url}?{AzAccoutKey}",

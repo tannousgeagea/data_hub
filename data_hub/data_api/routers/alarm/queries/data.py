@@ -18,6 +18,7 @@ from fastapi import APIRouter
 from fastapi import HTTPException, Query, Body, Form
 from fastapi.routing import APIRoute
 from typing import Dict, List, Optional
+from django.db.models import Prefetch
 from pydantic import BaseModel, Field, create_model, ValidationError
 from common_utils.timezone_utils.timeloc import (
     convert_to_local_time,
@@ -35,6 +36,7 @@ from tenants.models import (
 
 from acceptance_control.models import (
     Alarm,
+    AlarmTag,
     AlarmMedia,
     Severity,
     FlagType,
@@ -270,7 +272,12 @@ def get_alarm_data(
                     lookup_filters &= Q(**{field: val})
         
         rows = []
-        alarms = Alarm.objects.filter(lookup_filters).order_by('-created_at')
+        alarms = Alarm.objects.filter(lookup_filters).order_by('-created_at').prefetch_related(
+            Prefetch(
+                'alarm_tags',
+                queryset=AlarmTag.objects.select_related('tag')
+            )
+        )
 
         print(alarms)
         for alarm in alarms[(page - 1) * items_per_page:page * items_per_page]:
@@ -336,6 +343,7 @@ def get_alarm_data(
                 "ack_status": "✅" if alarm.ack_status else "⬛",
                 "severity_level_numerical": int(alarm.severity.level),
                 "feedback_provided": "✅" if alarm.feedback_provided else "⬛",
+                "tags": [alarm_tag.tag.name for alarm_tag in alarm.alarm_tags.all()],
                 }
                 
             rows.append(
