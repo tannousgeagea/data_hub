@@ -661,6 +661,29 @@ class TagGroup(models.Model):
     def __str__(self):
         return self.name
 
+
+class TagGroupLocalization(models.Model):
+    tag_group = models.ForeignKey(
+        TagGroup,
+        on_delete=models.RESTRICT,
+        related_name='tag_group_localization'
+    )
+    language = models.ForeignKey(Language, on_delete=models.RESTRICT)
+    name = models.CharField(max_length=100, help_text="Localized name of the tag group.")
+    description = models.TextField(blank=True, null=True, help_text="Localized description of the tag group.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'tag_group_localization'
+        verbose_name_plural = 'Tag Group Localizations'
+        unique_together = ('tag_group', 'language')
+        indexes = [
+            models.Index(fields=['tag_group', 'language']),
+        ]
+    
+    def __str__(self):
+        return f"Localization for '{self.tag_group.name}' in {self.language}"
+
 def infer_tag_group(name: str) -> TagGroup | None:
     for group_name, condition in TAG_GROUP_MAP.items():
         if condition(name):
@@ -692,3 +715,25 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+class TagLocalization(models.Model):
+    tag = models.ForeignKey(
+        Tag,
+        on_delete=models.RESTRICT,
+        related_name='tag_localization'
+    )
+    language = models.ForeignKey(Language, on_delete=models.RESTRICT)
+    name = models.CharField(max_length=100, help_text="Localized name of the tag.")
+    description = models.TextField(blank=True, null=True, help_text="Localized description of the tag.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'tag_localization'
+        verbose_name_plural = 'Tag Localizations'
+        unique_together = ('tag', 'language')
+        indexes = [
+            models.Index(fields=['tag', 'language']),
+        ]
+    
+    def __str__(self):
+        return f"Localization for '{self.tag.name}' in {self.language}"

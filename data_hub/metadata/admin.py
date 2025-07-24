@@ -1,5 +1,8 @@
 
 from django.contrib import admin
+from django.utils.html import format_html
+from django.forms import TextInput, Textarea
+from django.db import models
 from unfold.admin import ModelAdmin, TabularInline, StackedInline
 from .models import (
     Language, TableType, DataType, TableField, TenantTable, FieldOrder,
@@ -25,7 +28,7 @@ from .models import (
 
 from .models import (
     FormField, FormFieldLocalization, FeedbackForm, FeedbackFormField, FeedbackFormFieldItem,
-    FeedbackFormFieldItemLocalization, TenantFeedbackForm, Tag, TagGroup
+    FeedbackFormFieldItemLocalization, TenantFeedbackForm, Tag, TagGroup, TagGroupLocalization, TagLocalization
 )
 
 class TableFieldLocalizationInline(TabularInline):
@@ -298,15 +301,144 @@ class TenantFeedbackFormAdmin(ModelAdmin):
 #######################################################
 #################### Tag ##############################
 #######################################################
+class TagGroupLocalizationInline(TabularInline):
+    model = TagGroupLocalization
+    extra = 1
+    fields = ('language', 'name', 'description')
+    
+    # formfield_overrides = {
+    #     models.CharField: {'widget': TextInput(attrs={'size': '40'})},
+    #     models.TextField: {'widget': Textarea(attrs={'rows': 2, 'cols': 60})},
+    # }
+
+class TagLocalizationInline(TabularInline):
+    model = TagLocalization
+    extra = 1
+    fields = ('language', 'name', 'description')
+    
+    # formfield_overrides = {
+    #     models.CharField: {'widget': TextInput(attrs={'size': '40'})},
+    #     models.TextField: {'widget': Textarea(attrs={'rows': 2, 'cols': 60})},
+    # }
+
 @admin.register(TagGroup)
 class TagGroupAdmin(ModelAdmin):
-    list_display = ('name',)
+    list_display = ('name', 'description_preview', 'localization_count', 'tag_count')
     search_fields = ('name',)
+    ordering = ('name',)
+    inlines = [TagGroupLocalizationInline]
+
+    def description_preview(self, obj):
+        """Show truncated description in list view."""
+        if obj.description:
+            return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
+        return '-'
+    description_preview.short_description = 'Description'
+    
+    def localization_count(self, obj):
+        """Show number of localizations."""
+        count = obj.tag_group_localization.count()
+        if count > 0:
+            return format_html(
+                '<span style="color: green;">{} languages</span>',
+                count
+            )
+        return format_html('<span style="color: red;">No localizations</span>')
+    localization_count.short_description = 'Localizations'
+    
+    def tag_count(self, obj):
+        """Show number of tags in this group."""
+        count = obj.tags.count()
+        return format_html('<strong>{}</strong> tags', count)
+    tag_count.short_description = 'Tags'
+    
+    def get_queryset(self, request):
+        """Optimize queries by prefetching related objects."""
+        return super().get_queryset(request).prefetch_related(
+            'tag_group_localization__language',
+            'tags'
+        )
+@admin.register(TagGroupLocalization)
+class TagGroupLocalizationAdmin(ModelAdmin):
+    list_display = ('tag_group', 'language', 'name', 'description_preview', 'created_at')
+    list_filter = ('language', 'created_at', 'tag_group')
+    search_fields = ('name', 'description', 'tag_group__name')
+    ordering = ('tag_group__name', 'language__code')
+    readonly_fields = ('created_at',)
+    autocomplete_fields = ('tag_group',)
+    
+    fieldsets = (
+        (None, {
+            'fields': ('tag_group', 'language', 'name', 'description')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def description_preview(self, obj):
+        """Show truncated description in list view."""
+        if obj.description:
+            return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
+        return '-'
+    description_preview.short_description = 'Description'
 
 
 @admin.register(Tag)
 class TagAdmin(ModelAdmin):
-    list_display = ('name', 'group', 'color')
+    list_display = ('name', 'group', 'color_preview', 'localization_count')
     list_filter = ('group',)
     search_fields = ('name',)
     autocomplete_fields = ('group',)
+    inlines = [TagLocalizationInline]
+
+    def color_preview(self, obj):
+        """Show color preview with hex code."""
+        if obj.color:
+            return format_html(
+                '<div style="display: inline-block; width: 20px; height: 20px; '
+                'background-color: {}; border: 1px solid #ccc; margin-right: 5px; '
+                'vertical-align: middle;"></div>{}',
+                obj.color,
+                obj.color
+            )
+        return '-'
+    color_preview.short_description = 'Color'
+
+    def localization_count(self, obj):
+        """Show number of localizations."""
+        count = obj.tag_localization.count()
+        if count > 0:
+            return format_html(
+                '<span style="color: green;">{} languages</span>',
+                count
+            )
+        return format_html('<span style="color: red;">No localizations</span>')
+    localization_count.short_description = 'Localizations'
+
+@admin.register(TagLocalization)
+class TagLocalizationAdmin(ModelAdmin):
+    list_display = ('tag', 'language', 'name', 'description_preview', 'created_at')
+    list_filter = ('language', 'created_at', 'tag__tag_type', 'tag__group')
+    search_fields = ('name', 'description', 'tag__name')
+    ordering = ('tag__name', 'language__code')
+    readonly_fields = ('created_at',)
+    autocomplete_fields = ('tag',)
+    
+    fieldsets = (
+        (None, {
+            'fields': ('tag', 'language', 'name', 'description')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def description_preview(self, obj):
+        """Show truncated description in list view."""
+        if obj.description:
+            return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
+        return '-'
+    description_preview.short_description = 'Description'

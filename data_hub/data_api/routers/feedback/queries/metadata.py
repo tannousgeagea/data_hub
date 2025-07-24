@@ -29,6 +29,7 @@ from metadata.models import (
     TenantFeedbackForm,
     FormFieldLocalization,
     FeedbackFormFieldItemLocalization,
+    TagGroup, Tag, TagGroupLocalization, TagLocalization
 )
 
 class TimedRoute(APIRoute):
@@ -208,7 +209,38 @@ def get_metadata(
                 } for feedback_form_field in feedback_form_fields 
             ]
         }
-        
+
+        # Add tags grouped by TagGroup
+        tag_groups = []
+        for group in TagGroup.objects.all():
+            group_localization = group.tag_group_localization.filter(language=lang).first()
+            group_name = group_localization.name if group_localization else group.name
+            group_description = group_localization.description if group_localization else group.description
+
+            tags = []
+            for tag in group.tags.all():
+                tag_localization = tag.tag_localization.filter(language=lang).first()
+                tag_name = tag_localization.name if tag_localization else tag.name
+                tag_description = tag_localization.description if tag_localization else tag.description
+
+                tags.append({
+                    "id": tag.id,
+                    "key": tag.name,
+                    "title": tag_name,
+                    "type": tag.tag_type,
+                    "color": tag.color,
+                    "description": tag_description,
+                })
+
+            tag_groups.append({
+                "group_id": group.id,
+                "group_key": group.name,
+                "title": group_name,
+                "description": group_description,
+                "tags": tags,
+            })
+
+        results["metadata"]["tags"] = tag_groups
         results['status_code'] = "ok"
         results["detail"] = "metadata retrieved successfully"
         results["status_description"] = "OK"
