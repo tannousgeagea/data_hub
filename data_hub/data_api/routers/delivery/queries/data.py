@@ -2,6 +2,7 @@ import os
 import json
 import time
 import math
+import pytz
 import django
 from django.db import connection
 from django.db.models import Max, F
@@ -192,11 +193,11 @@ def get_delivery_data(
         
         if to_date is None:
             to_date = from_date
-            
-        from_date = from_date.replace(tzinfo=timezone.utc)
-        to_date = datetime.combine(to_date, dtime.max).replace(tzinfo=timezone.utc)
         
-        
+        local_tz = pytz.timezone(timezone_str)
+        from_date = local_tz.localize(datetime.combine(from_date, dtime.min))
+        to_date = local_tz.localize(datetime.combine(to_date, dtime.max))
+
         if page < 1:
             page = 1
         
